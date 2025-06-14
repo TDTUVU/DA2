@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 // Đăng ký
-const register = async (req, res) => {
+exports.register = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -44,7 +44,7 @@ const register = async (req, res) => {
 };
 
 // Đăng nhập
-const login = async (req, res) => {
+exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -64,10 +64,15 @@ const login = async (req, res) => {
       });
     }
 
+    console.log('User found:', {
+      _id: user._id,
+      role: user.role
+    });
+
     // Tạo JWT token
     const token = jwt.sign(
       { 
-        id: user._id,
+        _id: user._id,
         role: user.role 
       },
       process.env.JWT_SECRET,
@@ -89,7 +94,10 @@ const login = async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
-        role: user.role
+        role: user.role,
+        full_name: user.full_name,
+        phone_number: user.phone_number,
+        address: user.address
       }
     });
   } catch (error) {
@@ -101,7 +109,7 @@ const login = async (req, res) => {
 };
 
 // Tạo admin
-const createAdmin = async (req, res) => {
+exports.createAdmin = async (req, res) => {
   try {
     const { username, email, password, adminSecret } = req.body;
 
@@ -150,10 +158,10 @@ const createAdmin = async (req, res) => {
 };
 
 // Lấy thông tin người dùng hiện tại
-const getCurrentUser = async (req, res) => {
+exports.getCurrentUser = async (req, res) => {
   try {
     // req.user được set bởi authMiddleware.verifyToken
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user._id).select('-password');
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
@@ -168,7 +176,7 @@ const getCurrentUser = async (req, res) => {
 function generateRefreshToken(user) {
   return jwt.sign(
     {
-      id: user._id,
+      _id: user._id,
       role: user.role
     },
     process.env.REFRESH_TOKEN_SECRET,
@@ -177,7 +185,7 @@ function generateRefreshToken(user) {
 }
 
 // Thêm hàm refreshToken
-const refreshToken = (req, res) => {
+exports.refreshToken = (req, res) => {
   const refreshToken = req.cookies.refreshToken;
   if (!refreshToken) {
     return res.status(401).json({ message: 'Không có refresh token' });
@@ -189,12 +197,4 @@ const refreshToken = (req, res) => {
   } catch (error) {
     return res.status(401).json({ message: 'Refresh token không hợp lệ hoặc đã hết hạn' });
   }
-};
-
-module.exports = {
-  register,
-  login,
-  createAdmin,
-  getCurrentUser,
-  refreshToken
 };

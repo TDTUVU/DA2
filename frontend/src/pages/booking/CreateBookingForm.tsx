@@ -97,14 +97,16 @@ const CreateBookingForm: React.FC = () => {
       }
     } else {
       // Kiểm tra cho hotel và tour
-      if (!bookingData.check_in || !bookingData.check_out) {
-        toast.error('Vui lòng chọn ngày check-in và check-out');
-        return false;
-      }
+      if (bookingData.booking_type !== 'tour') {
+        if (!bookingData.check_in || !bookingData.check_out) {
+          toast.error('Vui lòng chọn ngày check-in và check-out');
+          return false;
+        }
 
-      if (new Date(bookingData.check_in) >= new Date(bookingData.check_out)) {
-        toast.error('Ngày check-out phải sau ngày check-in');
-        return false;
+        if (new Date(bookingData.check_in) >= new Date(bookingData.check_out)) {
+          toast.error('Ngày check-out phải sau ngày check-in');
+          return false;
+        }
       }
 
       if (bookingData.guests < 1) {
@@ -218,34 +220,50 @@ const CreateBookingForm: React.FC = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const bookingDataToSubmit = {
-        ...bookingData,
+      // CHỈNH SỬA: Tạo một bản sao của bookingData để có thể loại bỏ check_in/check_out nếu là tour
+      const { check_in, check_out, ...restOfBookingData } = bookingData;
+
+      const bookingPayload: any = {
+        ...restOfBookingData,
         ...(bookingData.booking_type === 'flight' && {
           seat_class: seatClass,
           luggage: luggage,
-          price_calculated: calculateTicketPrice() * bookingData.guests
+          price_calculated: calculateTicketPrice() * bookingData.guests,
+          // Đối với flight, backend có thể cần check_in/check_out từ serviceDetails.departure_time/arrival_time
+          // Hoặc chúng ta đã ẩn chúng trong form flight, nên giữ nguyên nếu cần
+          check_in: serviceDetails?.departure_time, 
+          check_out: serviceDetails?.arrival_time,
         }),
         ...(bookingData.booking_type === 'hotel' && {
           room_type: roomType,
           additional_services: additionalServices,
-          price_calculated: calculateRoomPrice() * bookingData.guests
+          price_calculated: calculateRoomPrice() * bookingData.guests,
+          check_in: bookingData.check_in, // Giữ lại cho hotel
+          check_out: bookingData.check_out, // Giữ lại cho hotel
         }),
         ...(bookingData.booking_type === 'tour' && {
           private_guide: privateGuide,
           tour_language: tourLanguage,
           transport_option: transportOption,
           price_calculated: calculateTourPrice() * bookingData.guests
+          // Không cần gửi check_in, check_out cho tour nữa
         })
       };
       
-      const response = await axios.post('/api/bookings', bookingDataToSubmit, {
+      const response = await axios.post('/api/bookings', bookingPayload, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
       });
 
       toast.success('Đặt chỗ thành công!');
-      navigate(`/bookings/${response.data.booking._id}`);
+      // CHỈNH SỬA: Điều hướng dựa trên phương thức thanh toán
+      if (bookingPayload.payment_method === 'credit_card') {
+        navigate(`/fake-card-payment/${response.data.booking._id}`);
+      } else {
+        // Với các phương thức khác, có thể điều hướng đến trang chi tiết booking hoặc một trang thông báo khác
+        navigate(`/bookings/${response.data.booking._id}`); 
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Không thể tạo booking');
     } finally {
@@ -371,45 +389,23 @@ const CreateBookingForm: React.FC = () => {
                 <p className="text-gray-600">Điểm đến: {serviceDetails.destination}</p>
                 <p className="text-gray-600">Giá cơ bản: {serviceDetails.price_per_person?.toLocaleString()} VND/người</p>
                 
-                {bookingData.check_in && bookingData.check_out && (
-                  <div className="mt-2 bg-blue-50 p-3 rounded">
-                    <p className="text-sm font-medium">Chi tiết thanh toán:</p>
-                    <div className="flex justify-between text-sm mt-1">
-                      <span>Ngày khởi hành:</span>
-                      <span>{new Date(bookingData.check_in).toLocaleDateString('vi-VN')}</span>
-                    </div>
-                    {privateGuide && (
-                      <div className="flex justify-between text-sm mt-1">
-                        <span>Hướng dẫn viên riêng:</span>
-                        <span>+500.000 VND</span>
-                      </div>
-                    )}
-                    {tourLanguage !== 'vietnamese' && (
-                      <div className="flex justify-between text-sm mt-1">
-                        <span>Ngôn ngữ: {tourLanguage === 'english' ? 'Tiếng Anh' : 'Ngôn ngữ khác'}</span>
-                        <span>+{tourLanguage === 'english' ? '10%' : '20%'}</span>
-                      </div>
-                    )}
-                    {transportOption === 'private' && (
-                      <div className="flex justify-between text-sm mt-1">
-                        <span>Đưa đón riêng:</span>
-                        <span>+300.000 VND</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-sm mt-1">
-                      <span>Số người tham gia:</span>
-                      <span>{bookingData.guests} người</span>
-                    </div>
-                    <div className="border-t border-blue-200 mt-2 pt-2 flex justify-between font-medium">
-                      <span>Giá/người:</span>
-                      <span>{calculateTourPrice().toLocaleString()} VND</span>
-                    </div>
-                    <div className="flex justify-between font-semibold text-blue-800">
-                      <span>Tổng cộng:</span>
-                      <span>{(calculateTourPrice() * bookingData.guests).toLocaleString()} VND</span>
-                    </div>
+                <div className="mt-2 bg-blue-50 p-3 rounded">
+                  <p className="text-sm font-medium">Chi tiết thanh toán:</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600 flex items-center">
+                      <FiCalendar className="mr-2" /> Ngày khởi hành:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {new Date(serviceDetails.departure_time).toLocaleDateString('vi-VN', {
+                        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                      })}
+                    </span>
                   </div>
-                )}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600">Thời gian tour:</span>
+                    <span className="text-sm font-medium">{serviceDetails.duration || 'Thông tin sắp được cập nhật'}</span>
+                  </div>
+                </div>
               </>
             )}
           </div>
@@ -754,52 +750,30 @@ const CreateBookingForm: React.FC = () => {
               <>
                 <div className="bg-blue-50 p-4 rounded-lg mb-4">
                   <h3 className="font-semibold mb-2 text-center">Chi tiết tour</h3>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">Thời gian:</span>
-                    <span className="text-sm">{serviceDetails.duration || '3 ngày 2 đêm'}</span>
-                  </div>
+                  {serviceDetails && (
+                    <>
+                      {serviceDetails.departure_time && (
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-600 flex items-center">
+                            <FiCalendar className="mr-2" /> Ngày khởi hành:
+                          </span>
+                          <span className="text-sm font-medium">
+                            {new Date(serviceDetails.departure_time).toLocaleDateString('vi-VN', {
+                              year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-600">Thời gian tour:</span>
+                        <span className="text-sm font-medium">{serviceDetails.duration || 'Thông tin sắp được cập nhật'}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Khởi hành từ:</span>
-                    <span className="text-sm">{serviceDetails.departure_location || 'Chưa xác định'}</span>
+                    <span className="text-sm">{serviceDetails?.departure_location || 'Chưa xác định'}</span>
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                    <FiCalendar className="mr-2" />
-                    Ngày bắt đầu tour
-                  </label>
-                  <input
-                    type="date"
-                    name="check_in"
-                    value={bookingData.check_in}
-                    onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    required
-                    min={new Date().toISOString().split('T')[0]}
-                    aria-label="Ngày bắt đầu tour"
-                    title="Chọn ngày bắt đầu tour"
-                    placeholder="Chọn ngày bắt đầu tour"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                    <FiCalendar className="mr-2" />
-                    Ngày kết thúc tour
-                  </label>
-                  <input
-                    type="date"
-                    name="check_out"
-                    value={bookingData.check_out}
-                    onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    required
-                    min={bookingData.check_in || new Date().toISOString().split('T')[0]}
-                    aria-label="Ngày kết thúc tour"
-                    title="Chọn ngày kết thúc tour"
-                    placeholder="Chọn ngày kết thúc tour"
-                  />
                 </div>
 
                 <div className="space-y-4">
@@ -886,9 +860,8 @@ const CreateBookingForm: React.FC = () => {
                 aria-label="Phương thức thanh toán"
                 title="Chọn phương thức thanh toán"
               >
-                <option value="credit_card">Thẻ tín dụng</option>
-                <option value="bank_transfer">Chuyển khoản ngân hàng</option>
-                <option value="paypal">PayPal</option>
+                <option value="credit_card">Thẻ tín dụng/Ghi nợ</option>
+                <option value="VNPay">Thanh toán qua VNPay</option>
               </select>
             </div>
 

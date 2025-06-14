@@ -9,11 +9,13 @@ interface User {
   full_name: string;
   phone_number: string;
   address: string;
+  role: 'user' | 'admin';
 }
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
+  isLoading: boolean;
   isLoginModalOpen: boolean;
   isLoginMode: boolean;
   isForgotPasswordOpen: boolean;
@@ -24,7 +26,7 @@ interface AuthContextType {
   closeForgotPasswordModal: () => void;
   openLogoutConfirmModal: () => void;
   closeLogoutConfirmModal: () => void;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   register: (data: {
     username: string;
     email: string;
@@ -50,6 +52,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isLoginMode, setIsLoginMode] = useState(true)
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
@@ -59,15 +62,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkAuth = async () => {
       if (authService.isAuthenticated()) {
         try {
-          const userData = await authService.getCurrentUser()
-          setUser(userData)
-          setIsAuthenticated(true)
+          const userData = await authService.getCurrentUser();
+          setUser(userData);
+          setIsAuthenticated(true);
         } catch (error) {
-          authService.logout()
-          setIsAuthenticated(false)
-          setUser(null)
+          console.error('Error checking auth:', error);
+          setIsAuthenticated(false);
+          setUser(null);
         }
       }
+      setIsLoading(false);
     }
     checkAuth()
   }, [])
@@ -98,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLogoutConfirmOpen(false)
   }
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     try {
       const response = await authService.login({ email, password })
       localStorage.setItem('token', response.token)
@@ -106,6 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(true)
       closeLoginModal()
       toast.success('Đăng nhập thành công!')
+      return response.user;
     } catch (error: any) {
       toast.error(error.message || 'Đăng nhập thất bại')
       throw error
@@ -139,11 +144,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     address?: string;
   }) => {
     try {
-      const updatedUser = await authService.updateProfile(data)
-      setUser(updatedUser)
-      toast.success('Cập nhật thông tin thành công!')
+      const updatedUser = await authService.updateProfile(data);
+      setUser(updatedUser);
+      toast.success('Cập nhật thông tin thành công!');
     } catch (error: any) {
-      toast.error(error.message || 'Cập nhật thông tin thất bại')
+      toast.error(error.message || 'Cập nhật thông tin thất bại');
       throw error
     }
   }
@@ -196,6 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         isAuthenticated,
         user,
+        isLoading,
         isLoginModalOpen,
         isLoginMode,
         isForgotPasswordOpen,

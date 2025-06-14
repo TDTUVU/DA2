@@ -17,15 +17,32 @@ const verifyToken = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       console.log('Token verified successfully');
-      console.log('Decoded Token:', decoded); // Log để kiểm tra token đã giải mã
-      req.user = decoded; // Gắn thông tin user vào req.user
+      console.log('Decoded Token:', {
+        _id: decoded._id,
+        role: decoded.role
+      });
+      
+      // Đảm bảo decoded có đủ thông tin cần thiết
+      if (!decoded._id || !decoded.role) {
+        console.log('Token missing required fields');
+        return res.status(401).json({ message: 'Token không hợp lệ' });
+      }
+
+      // Set user info vào req.user
+      req.user = {
+        id: decoded._id,
+        _id: decoded._id,
+        role: decoded.role
+      };
+      
+      console.log('User set in request:', req.user);
       next();
     } catch (jwtError) {
       console.error('JWT verification failed:', jwtError.message);
       return res.status(401).json({ message: 'Token không hợp lệ hoặc hết hạn' });
     }
   } catch (error) {
-    console.error('Auth middleware error:', error); // Log lỗi chi tiết
+    console.error('Auth middleware error:', error);
     res.status(401).json({ message: 'Token không hợp lệ' });
   }
 };

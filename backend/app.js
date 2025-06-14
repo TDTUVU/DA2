@@ -10,8 +10,12 @@ const flightRoutes = require('./routes/flight.routes');
 const tourRoutes = require('./routes/tour.routes');
 const cookieParser = require('cookie-parser');
 const bookingRoutes = require('./routes/booking.routes');
+const paymentRoutes = require('./routes/payment.routes');
+const helmet = require('helmet');
+const revenueRoutes = require('./routes/revenue.routes');
 
 const app = express();
+app.set('trust proxy', 1); // Tin tưởng proxy để lấy IP thật
 
 // Cấu hình CORS
 app.use(cors({
@@ -21,7 +25,13 @@ app.use(cors({
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
 }));
 
-app.use(express.json()); // Middleware để parse JSON
+app.use(helmet());
+
+// Middleware
+// Tăng giới hạn payload cho JSON để xử lý ảnh base64
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 app.use(cookieParser());
 
 // Serve static files from public folder
@@ -34,11 +44,13 @@ app.use('/api/hotels', hotelRoutes);
 app.use('/api/flights', flightRoutes);
 app.use('/api/tours', tourRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/admin/revenue', revenueRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: 'Lỗi server', error: err.message });
+  res.status(500).json({ message: 'Đã có lỗi xảy ra!', error: err.message });
 });
 
 module.exports = app;

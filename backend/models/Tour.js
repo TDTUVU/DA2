@@ -1,10 +1,6 @@
 const mongoose = require('mongoose');
 
 const tourSchema = new mongoose.Schema({
-  _id: {
-    type: mongoose.Schema.Types.ObjectId,
-    default: () => new mongoose.Types.ObjectId()
-  },
   tour_name: {
     type: String,
     required: true
@@ -70,27 +66,12 @@ const tourSchema = new mongoose.Schema({
     type: [String],
     default: []
   },
-  created_at: {
-    type: Date,
-    default: Date.now
-  },
-  updated_at: {
-    type: Date,
-    default: Date.now
+  isActive: {
+    type: Boolean,
+    default: true
   }
 }, {
-  timestamps: false,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
-
-// Thêm phương thức để khởi tạo đúng ID
-tourSchema.pre('save', function(next) {
-  // Nếu _id là chuỗi và có định dạng hợp lệ của ObjectId, chuyển đổi thành ObjectId
-  if (typeof this._id === 'string' && mongoose.Types.ObjectId.isValid(this._id)) {
-    this._id = new mongoose.Types.ObjectId(this._id);
-  }
-  next();
+  timestamps: true
 });
 
 const Tour = mongoose.model('Tour', tourSchema);

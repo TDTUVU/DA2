@@ -1,132 +1,98 @@
 const Hotel = require('../models/Hotel');
 const mongoose = require('mongoose');
+const { uploadToCloudinary } = require('../utils/cloudinary.uploader');
 
-// Lấy danh sách khách sạn
+// Lấy danh sách khách sạn (có phân trang, tìm kiếm và phân quyền)
 exports.getAllHotels = async (req, res) => {
   try {
-    console.log('Fetching all hotels...');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
     
-    // Tìm kiếm tất cả hotels
-    const hotels = await Hotel.find({}).lean();
-    console.log('Number of hotels found:', hotels.length);
-    
-    // Trả về danh sách
-    res.json(hotels);
+    const query = search 
+      ? { name: { $regex: search, $options: 'i' } } 
+      : {};
+
+    // Chỉ hiển thị các khách sạn đang hoạt động cho người dùng thông thường
+    if (!req.user || req.user.role !== 'admin') {
+      query.isActive = true;
+    }
+
+    const total = await Hotel.countDocuments(query);
+    const hotels = await Hotel.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+      
+    res.status(200).json({ hotels, total, page, pages: Math.ceil(total / limit) });
   } catch (error) {
-    console.error('Error in getAllHotels:', error);
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi server khi lấy danh sách khách sạn.', error: error.message });
   }
 };
 
 // Lấy chi tiết khách sạn
 exports.getHotelById = async (req, res) => {
   try {
-    console.log('Getting hotel details for ID:', req.params.id);
-    const hotelId = req.params.id;
-    
-    // Thêm debug để kiểm tra ID có hợp lệ không
-    console.log('Is valid ObjectId:', mongoose.Types.ObjectId.isValid(hotelId));
-    
-    // Lấy tất cả khách sạn để kiểm tra ID có tồn tại không
-    const allHotels = await Hotel.find({}).lean();
-    console.log('All hotel IDs in database:', allHotels.map(h => ({ id: h._id, type: typeof h._id, toString: String(h._id) })));
-    
-    let hotel;
-    
-    // Phương pháp 1: Tìm trực tiếp bằng ID
-    try {
-      console.log('Trying findById...');
-      hotel = await Hotel.findById(hotelId).lean();
-      console.log('findById result:', hotel ? 'Found' : 'Not found');
-    } catch (err) {
-      console.log('Error when finding by ID:', err.message);
-    }
-    
-    // Phương pháp 2: Khớp chính xác _id
+    const hotel = await Hotel.findById(req.params.id).lean();
     if (!hotel) {
-      try {
-        console.log('Trying findOne with exact _id...');
-        hotel = await Hotel.findOne({ _id: hotelId }).lean();
-        console.log('findOne result:', hotel ? 'Found' : 'Not found');
-      } catch (err) {
-        console.log('Error when finding by _id with findOne:', err.message);
-      }
+      return res.status(404).json({ message: 'Không tìm thấy khách sạn.' });
     }
-    
-    // Phương pháp 3: Tìm kiếm theo _id dạng string
-    if (!hotel) {
-      try {
-        console.log('Trying as string ID...');
-        hotel = await Hotel.findOne({ _id: String(hotelId) }).lean();
-        console.log('findOne with String(id) result:', hotel ? 'Found' : 'Not found');
-      } catch (err) {
-        console.log('Error when finding by string ID:', err.message);
-      }
-    }
-    
-    // Phương pháp 4: Tạo một ObjectID mới và tìm kiếm
-    if (!hotel) {
-      try {
-        console.log('Trying with new ObjectId...');
-        const objectId = new mongoose.Types.ObjectId(hotelId);
-        hotel = await Hotel.findOne({ _id: objectId }).lean();
-        console.log('findOne with new ObjectId result:', hotel ? 'Found' : 'Not found');
-      } catch (err) {
-        console.log('Error when finding with new ObjectId:', err.message);
-      }
-    }
-    
-    console.log('Hotel found:', hotel ? 'Yes' : 'No');
-    
-    if (!hotel) {
-      return res.status(404).json({ message: 'Không tìm thấy khách sạn' });
-    }
-    
-    // Đảm bảo các trường cần thiết luôn có
-    if (!hotel.amenities) hotel.amenities = [];
-    if (!hotel.images) hotel.images = [];
-    if (!hotel.policies) hotel.policies = [];
-    
-    res.json(hotel);
+    res.status(200).json(hotel);
   } catch (error) {
-    console.error('Error in getHotelById:', error);
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi server khi lấy chi tiết khách sạn.', error: error.message });
   }
 };
 
 // Thêm khách sạn mới (admin)
 exports.createHotel = async (req, res) => {
-  try {
-    const hotel = new Hotel(req.body);
-    await hotel.save();
-    res.status(201).json({
-      message: 'Thêm khách sạn thành công',
-      hotel
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
-  }
+    try {
+        const hotelData = req.body;
+        const files = req.files;
+
+        let imageUrls = [];
+        if (files && files.length > 0) {
+            const uploadPromises = files.map(file => uploadToCloudinary(file));
+            const uploadResults = await Promise.all(uploadPromises);
+            imageUrls = uploadResults.map(result => result.secure_url);
+        }
+
+        const newHotel = new Hotel({ 
+            ...hotelData, 
+            images: imageUrls 
+        });
+        await newHotel.save();
+        res.status(201).json(newHotel);
+    } catch (error) {
+        res.status(400).json({ message: 'Lỗi khi tạo khách sạn.', error: error.message });
+    }
 };
 
 // Cập nhật thông tin khách sạn (admin)
 exports.updateHotel = async (req, res) => {
   try {
-    const hotel = await Hotel.findByIdAndUpdate(
-      req.params.id,
-      { $set: req.body },
-      { new: true, runValidators: true }
-    );
+    const { id } = req.params;
+    const updateData = { ...req.body };
+    const files = req.files;
 
-    if (!hotel) {
-      return res.status(404).json({ message: 'Không tìm thấy khách sạn' });
+    // Chỉ upload và cập nhật ảnh nếu có file mới
+    if (files && files.length > 0) {
+        const uploadPromises = files.map(file => uploadToCloudinary(file));
+        const uploadResults = await Promise.all(uploadPromises);
+        const newImageUrls = uploadResults.map(result => result.secure_url);
+        // Thay thế hoàn toàn ảnh cũ bằng ảnh mới
+        updateData.images = newImageUrls;
     }
-
-    res.json({
-      message: 'Cập nhật thông tin khách sạn thành công',
-      hotel
-    });
+    
+    const updatedHotel = await Hotel.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
+    
+    if (!updatedHotel) {
+        return res.status(404).json({ message: 'Không tìm thấy khách sạn để cập nhật.' });
+    }
+    
+    res.status(200).json(updatedHotel);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(400).json({ message: 'Lỗi khi cập nhật khách sạn.', error: error.message });
   }
 };
 
@@ -135,11 +101,11 @@ exports.deleteHotel = async (req, res) => {
   try {
     const hotel = await Hotel.findByIdAndDelete(req.params.id);
     if (!hotel) {
-      return res.status(404).json({ message: 'Không tìm thấy khách sạn' });
+      return res.status(404).json({ message: 'Không tìm thấy khách sạn để xóa.' });
     }
-    res.json({ message: 'Xóa khách sạn thành công' });
+    res.status(200).json({ message: 'Xóa khách sạn thành công.' });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi server khi xóa khách sạn.', error: error.message });
   }
 };
 
@@ -243,5 +209,25 @@ exports.recreateHotels = async (req, res) => {
   } catch (error) {
     console.error('Error in recreateHotels:', error);
     res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+// Bật/tắt trạng thái hiển thị của khách sạn
+exports.toggleHotelVisibility = async (req, res) => {
+  try {
+    const hotel = await Hotel.findById(req.params.id);
+    if (!hotel) {
+      return res.status(404).json({ message: 'Không tìm thấy khách sạn.' });
+    }
+
+    hotel.isActive = !hotel.isActive;
+    await hotel.save();
+
+    res.status(200).json({
+      message: `Khách sạn đã được ${hotel.isActive ? 'kích hoạt' : 'vô hiệu hóa'} thành công.`,
+      hotel
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server khi thay đổi trạng thái khách sạn.', error: error.message });
   }
 }; 

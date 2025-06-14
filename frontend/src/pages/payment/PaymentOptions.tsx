@@ -27,12 +27,6 @@ const PaymentOptions: React.FC = () => {
       description: 'Thanh toán an toàn với các thẻ Visa, Mastercard, JCB'
     },
     {
-      id: 'bank_transfer',
-      name: 'Chuyển khoản ngân hàng',
-      logo: 'https://cdn-icons-png.flaticon.com/512/2830/2830289.png',
-      description: 'Chuyển khoản trực tiếp đến tài khoản ngân hàng của chúng tôi'
-    },
-    {
       id: 'VNPay',
       name: 'Thanh toán qua VNPay',
       logo: 'https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-VNPAY-QR.png',
@@ -73,7 +67,9 @@ const PaymentOptions: React.FC = () => {
     setError(null);
 
     try {
-      if (selectedMethod === 'VNPay') {
+      if (selectedMethod === 'credit_card') {
+        navigate(`/fake-card-payment/${bookingId}`);
+      } else if (selectedMethod === 'VNPay') {
         // Xử lý thanh toán VNPay
         const response = await paymentService.createVNPayPayment(bookingId);
         

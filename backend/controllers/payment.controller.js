@@ -48,18 +48,34 @@ exports.createPayment = async (req, res) => {
 
 // Tạo URL thanh toán VNPay
 exports.createVnpayPayment = async (req, res) => {
+  console.log('--- createVnpayPayment ---');
+  console.log('req.user (from token):', JSON.stringify(req.user, null, 2)); 
+  console.log('req.body (booking_id):', req.body);
   try {
+    console.log('Entered createVnpayPayment try block for user:', req.user?.id);
     const { booking_id } = req.body;
     
+    if (!booking_id) {
+      console.log('Error: Missing booking_id in request body');
+      return res.status(400).json({ message: 'Thiếu booking_id' });
+    }
+
     // Kiểm tra booking tồn tại
     const booking = await Booking.findById(booking_id);
     if (!booking) {
+      console.log(`Error: Booking not found for booking_id: ${booking_id}`);
       return res.status(404).json({ message: 'Không tìm thấy booking' });
     }
+    console.log('Booking user_id:', booking.user_id.toString()); 
+        
+    // Đây là phần quan trọng để debug
+    // const tokenUserId = req.user?.id || req.user?.userId; // Dòng này có thể giữ lại hoặc bỏ đi sau khi xác nhận
+    console.log('Token user identifier (req.user.id):', req.user?.id);
 
-    // Kiểm tra quyền truy cập
-    if (booking.user_id.toString() !== req.user.userId) {
-      return res.status(403).json({ message: 'Bạn không có quyền truy cập' });
+    // Kiểm tra quyền truy cập: Sử dụng req.user.id
+    if (!req.user || !req.user.id || booking.user_id.toString() !== req.user.id) {
+      console.log(`Access Denied in createVnpayPayment: Booking User ID (${booking.user_id.toString()}) vs Token User ID (${req.user?.id})`);
+      return res.status(403).json({ message: 'Bạn không có quyền truy cập hoặc thông tin người dùng không hợp lệ' });
     }
 
     // Tạo transaction ID
@@ -67,7 +83,7 @@ exports.createVnpayPayment = async (req, res) => {
 
     // Tạo bản ghi thanh toán
     const payment = new Payment({
-      user_id: req.user.userId,
+      user_id: req.user.id,
       booking_id,
       amount: booking.total_amount,
       payment_date: new Date(),
@@ -83,9 +99,11 @@ exports.createVnpayPayment = async (req, res) => {
     await booking.save();
 
     // Tạo URL thanh toán VNPay
-    const ipAddr = req.headers['x-forwarded-for'] || 
-                   req.connection.remoteAddress || 
-                   req.socket.remoteAddress;
+    let ipAddr = req.headers['x-forwarded-for'] || req.ip;
+    // Hardcode IP cho môi trường test local để tránh lỗi sai chữ ký do IP là ::1
+    if (ipAddr === '::1' || ipAddr === '127.0.0.1') {
+      ipAddr = '1.55.163.222'; // Một địa chỉ IP công khai của Việt Nam
+    }
 
     const paymentUrl = vnpayUtils.createPaymentUrl({
       booking_id: booking._id.toString(),
@@ -93,12 +111,14 @@ exports.createVnpayPayment = async (req, res) => {
       orderId: payment._id.toString()
     }, ipAddr);
 
+    console.log('Successfully processed, preparing to send 200 response for paymentUrl for user:', req.user?.id);
     res.status(200).json({
       message: 'Tạo URL thanh toán VNPay thành công',
       paymentUrl,
       paymentId: payment._id
     });
   } catch (error) {
+    console.error('Error within createVnpayPayment for user:', req.user?.id, 'Error:', error);
     res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };

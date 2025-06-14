@@ -11,6 +11,8 @@ const bookingRoutes = require('./booking.routes'); // Đảm bảo import đúng
 const paymentRoutes = require('./payment.routes');
 const reviewRoutes = require('./review.routes');
 const locationRoutes = require('./location.routes');
+const uploadRoutes = require('./upload.routes');
+const dashboardRoutes = require('./dashboard.routes');
 
 // Use routes
 router.use('/auth', authRoutes);
@@ -22,5 +24,7 @@ router.use('/bookings', bookingRoutes); // Đảm bảo sử dụng đúng
 router.use('/payments', paymentRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/locations', locationRoutes);
+router.use('/upload', uploadRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 module.exports = router;

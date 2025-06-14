@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { toast } from 'react-toastify'
 import { FaFacebook, FaGoogle, FaGithub } from 'react-icons/fa'
+import { useNavigate } from 'react-router-dom'
 
 interface FormData {
   username: string
@@ -14,6 +15,7 @@ interface FormData {
 
 const LoginModal: React.FC = () => {
   const { isLoginModalOpen, isLoginMode, closeLoginModal, login, register, openLoginModal, openForgotPasswordModal } = useAuth()
+  const navigate = useNavigate()
   const [formData, setFormData] = useState<FormData>({
     username: '',
     email: '',
@@ -52,7 +54,10 @@ const LoginModal: React.FC = () => {
 
     try {
       if (isLoginMode) {
-        await login(formData.email, formData.password)
+        const loggedInUser = await login(formData.email, formData.password)
+        if (loggedInUser.role === 'admin') {
+          navigate('/admin')
+        }
       } else {
         await register({
           username: formData.username,

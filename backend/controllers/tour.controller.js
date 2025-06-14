@@ -1,20 +1,34 @@
 const Tour = require('../models/Tour');
 const mongoose = require('mongoose');
+const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary.uploader');
 
-// Lấy danh sách tour
+// GET /api/tours - Lấy danh sách tour (có phân trang và tìm kiếm)
 exports.getAllTours = async (req, res) => {
   try {
-    console.log('Fetching all tours...');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
     
-    // Tìm kiếm tất cả tours
-    const tours = await Tour.find({}).lean();
-    console.log('Number of tours found:', tours.length);
-    
-    // Trả về danh sách
-    res.json(tours);
+    const query = search 
+      ? { tour_name: { $regex: search, $options: 'i' } } 
+      : {};
+
+    // Chỉ hiển thị các tour đang hoạt động cho người dùng thông thường
+    // Admin có thể thấy tất cả
+    if (!req.user || req.user.role !== 'admin') {
+      query.isActive = true;
+    }
+
+    const total = await Tour.countDocuments(query);
+    const tours = await Tour.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+      
+    res.status(200).json({ tours, total, page, pages: Math.ceil(total / limit) });
   } catch (error) {
-    console.error('Error in getAllTours:', error);
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi server khi lấy danh sách tour.', error: error.message });
   }
 };
 
@@ -44,132 +58,86 @@ exports.createSampleTours = async (req, res) => {
   }
 };
 
-// Lấy chi tiết tour
+// GET /api/tours/:id - Lấy chi tiết một tour
 exports.getTourById = async (req, res) => {
   try {
-    console.log('Getting tour details for ID:', req.params.id);
-    const tourId = req.params.id;
-    
-    // Thêm debug để kiểm tra ID có hợp lệ không
-    console.log('Is valid ObjectId:', mongoose.Types.ObjectId.isValid(tourId));
-    
-    // Lấy tất cả tour để kiểm tra ID có tồn tại không
-    const allTours = await Tour.find({}).lean();
-    console.log('All tour IDs in database:', allTours.map(t => ({ id: t._id, type: typeof t._id, toString: String(t._id) })));
-    
-    let tour;
-    
-    // Phương pháp 1: Tìm trực tiếp bằng ID
-    try {
-      console.log('Trying findById...');
-      tour = await Tour.findById(tourId).lean();
-      console.log('findById result:', tour ? 'Found' : 'Not found');
-    } catch (err) {
-      console.log('Error when finding by ID:', err.message);
-    }
-    
-    // Phương pháp 2: Khớp chính xác _id
+    const tour = await Tour.findById(req.params.id).lean();
     if (!tour) {
-      try {
-        console.log('Trying findOne with exact _id...');
-        tour = await Tour.findOne({ _id: tourId }).lean();
-        console.log('findOne result:', tour ? 'Found' : 'Not found');
-      } catch (err) {
-        console.log('Error when finding by _id with findOne:', err.message);
-      }
+      return res.status(404).json({ message: 'Không tìm thấy tour.' });
     }
-    
-    // Phương pháp 3: Tìm kiếm theo _id dạng string
-    if (!tour) {
-      try {
-        console.log('Trying as string ID...');
-        tour = await Tour.findOne({ _id: String(tourId) }).lean();
-        console.log('findOne with String(id) result:', tour ? 'Found' : 'Not found');
-      } catch (err) {
-        console.log('Error when finding by string ID:', err.message);
-      }
-    }
-    
-    // Phương pháp 4: Tạo một ObjectID mới và tìm kiếm
-    if (!tour) {
-      try {
-        console.log('Trying with new ObjectId...');
-        const objectId = new mongoose.Types.ObjectId(tourId);
-        tour = await Tour.findOne({ _id: objectId }).lean();
-        console.log('findOne with new ObjectId result:', tour ? 'Found' : 'Not found');
-      } catch (err) {
-        console.log('Error when finding with new ObjectId:', err.message);
-      }
-    }
-    
-    console.log('Tour found:', tour ? 'Yes' : 'No');
-    
-    if (!tour) {
-      return res.status(404).json({ message: 'Không tìm thấy tour' });
-    }
-    
-    // Đảm bảo các trường cần thiết luôn có
-    if (!tour.itinerary) tour.itinerary = [];
-    if (!tour.inclusions) tour.inclusions = [];
-    if (!tour.exclusions) tour.exclusions = [];
-    if (!tour.images) tour.images = [];
-    if (!tour.policies) tour.policies = [];
-    if (!tour.highlights) tour.highlights = [];
-    if (!tour.requirements) tour.requirements = [];
-    
-    res.json(tour);
+    res.status(200).json(tour);
   } catch (error) {
-    console.error('Error in getTourById:', error);
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: `Lỗi server khi lấy tour ${req.params.id}.`, error: error.message });
   }
 };
 
-// Thêm tour mới (admin)
+// POST /api/tours - Tạo tour mới
 exports.createTour = async (req, res) => {
-  try {
-    const tour = new Tour(req.body);
-    await tour.save();
-    res.status(201).json({
-      message: 'Thêm tour thành công',
-      tour
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
-  }
+    try {
+        // Dữ liệu tour được gửi dưới dạng chuỗi JSON trong trường 'data'
+        const tourData = JSON.parse(req.body.data);
+        const files = req.files;
+
+        let imageUrls = [];
+        if (files && files.length > 0) {
+            const uploadPromises = files.map(file => uploadToCloudinary(file));
+            const uploadResults = await Promise.all(uploadPromises);
+            imageUrls = uploadResults.map(result => result.secure_url);
+        }
+
+        const newTour = new Tour({ 
+            ...tourData, 
+            images: imageUrls 
+        });
+        await newTour.save();
+        res.status(201).json(newTour);
+    } catch (error) {
+        console.error('Create tour error:', error);
+        res.status(400).json({ message: 'Lỗi khi tạo tour.', error: error.message });
+    }
 };
 
-// Cập nhật thông tin tour (admin)
+// PATCH /api/tours/:id - Cập nhật tour
 exports.updateTour = async (req, res) => {
   try {
-    const tour = await Tour.findByIdAndUpdate(
-      req.params.id,
-      { $set: req.body },
-      { new: true, runValidators: true }
-    );
+    const { id } = req.params;
+    const tourData = JSON.parse(req.body.data);
+    const files = req.files;
 
-    if (!tour) {
-      return res.status(404).json({ message: 'Không tìm thấy tour' });
+    let newImageUrls = [];
+    if (files && files.length > 0) {
+        const uploadPromises = files.map(file => uploadToCloudinary(file));
+        const uploadResults = await Promise.all(uploadPromises);
+        newImageUrls = uploadResults.map(result => result.secure_url);
     }
-
-    res.json({
-      message: 'Cập nhật thông tin tour thành công',
-      tour
-    });
+    
+    // Kết hợp ảnh cũ (nếu có) và ảnh mới
+    const finalImages = [...(tourData.images || []), ...newImageUrls];
+    const updatePayload = { ...tourData, images: finalImages };
+    
+    const updatedTour = await Tour.findByIdAndUpdate(id, updatePayload, { new: true, runValidators: true });
+    
+    if (!updatedTour) {
+        return res.status(404).json({ message: 'Không tìm thấy tour để cập nhật.' });
+    }
+    
+    res.status(200).json(updatedTour);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    console.error('Update tour error:', error);
+    res.status(400).json({ message: 'Lỗi khi cập nhật tour.', error: error.message });
   }
 };
 
-// Xóa tour (admin)
+// DELETE /api/tours/:id - Xóa tour
 exports.deleteTour = async (req, res) => {
   try {
     const tour = await Tour.findByIdAndDelete(req.params.id);
     if (!tour) {
-      return res.status(404).json({ message: 'Không tìm thấy tour' });
+      return res.status(404).json({ message: 'Không tìm thấy tour để xóa.' });
     }
-    res.json({ message: 'Xóa tour thành công' });
+    res.status(200).json({ message: 'Xóa tour thành công.' });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi server khi xóa tour.', error: error.message });
   }
 };
 
@@ -277,5 +245,25 @@ exports.recreateTours = async (req, res) => {
   } catch (error) {
     console.error('Error in recreateTours:', error);
     res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+// Toggle visibility của tour
+exports.toggleTourVisibility = async (req, res) => {
+  try {
+    const tour = await Tour.findById(req.params.id);
+    if (!tour) {
+      return res.status(404).json({ message: 'Không tìm thấy tour.' });
+    }
+
+    tour.isActive = !tour.isActive;
+    await tour.save();
+
+    res.status(200).json({
+      message: `Tour đã được ${tour.isActive ? 'kích hoạt' : 'vô hiệu hóa'} thành công.`,
+      tour
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server khi thay đổi trạng thái tour.', error: error.message });
   }
 };

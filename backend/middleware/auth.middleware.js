@@ -34,7 +34,22 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+const softVerifyToken = (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+    }
+  } catch (error) {
+    // Bỏ qua lỗi, coi như người dùng chưa đăng nhập
+    // Lỗi có thể là token hết hạn hoặc không hợp lệ
+  }
+  next();
+};
+
 module.exports = {
   verifyToken,
-  isAdmin
+  isAdmin,
+  softVerifyToken,
 }; 

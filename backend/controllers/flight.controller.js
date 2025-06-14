@@ -1,20 +1,33 @@
 const Flight = require('../models/Flight');
 const mongoose = require('mongoose');
+const { uploadToCloudinary } = require('../utils/cloudinary.uploader');
 
-// Lấy danh sách chuyến bay
+// Lấy danh sách chuyến bay (có phân trang, tìm kiếm và phân quyền)
 exports.getAllFlights = async (req, res) => {
   try {
-    console.log('Fetching all flights...');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
     
-    // Tìm kiếm tất cả flights
-    const flights = await Flight.find({}).lean();
-    console.log('Number of flights found:', flights.length);
-    
-    // Trả về danh sách
-    res.json(flights);
+    const query = search 
+      ? { flight_name: { $regex: search, $options: 'i' } } 
+      : {};
+
+    // Chỉ hiển thị các chuyến bay đang hoạt động cho người dùng thông thường
+    if (!req.user || req.user.role !== 'admin') {
+      query.isActive = true;
+    }
+
+    const total = await Flight.countDocuments(query);
+    const flights = await Flight.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+      
+    res.status(200).json({ flights, total, page, pages: Math.ceil(total / limit) });
   } catch (error) {
-    console.error('Error in getAllFlights:', error);
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi server khi lấy danh sách chuyến bay.', error: error.message });
   }
 };
 
@@ -47,84 +60,12 @@ exports.createSampleFlights = async (req, res) => {
 // Lấy chi tiết chuyến bay
 exports.getFlightById = async (req, res) => {
   try {
-    const flightId = req.params.id;
-    console.log('Flight ID received:', flightId);
-    
-    // Thêm debug để kiểm tra ID có hợp lệ không
-    console.log('Is valid ObjectId:', mongoose.Types.ObjectId.isValid(flightId));
-    
-    // Lấy tất cả chuyến bay để kiểm tra ID có tồn tại không
-    const allFlights = await Flight.find({}).lean();
-    console.log('All flight IDs in database:', allFlights.map(f => ({ id: f._id, type: typeof f._id, toString: String(f._id) })));
-    
-    let flight;
-    
-    // Phương pháp 1: Tìm trực tiếp bằng ID
-    try {
-      console.log('Trying findById...');
-      flight = await Flight.findById(flightId).lean();
-      console.log('findById result:', flight ? 'Found' : 'Not found');
-    } catch (err) {
-      console.log('Error when finding by ID:', err.message);
-    }
-    
-    // Phương pháp 2: Khớp chính xác _id
-    if (!flight) {
-      try {
-        console.log('Trying findOne with exact _id...');
-        flight = await Flight.findOne({ _id: flightId }).lean();
-        console.log('findOne result:', flight ? 'Found' : 'Not found');
-      } catch (err) {
-        console.log('Error when finding by _id with findOne:', err.message);
-      }
-    }
-    
-    // Phương pháp 3: Tìm kiếm theo _id dạng string
-    if (!flight) {
-      try {
-        console.log('Trying as string ID...');
-        flight = await Flight.findOne({ _id: String(flightId) }).lean();
-        console.log('findOne with String(id) result:', flight ? 'Found' : 'Not found');
-      } catch (err) {
-        console.log('Error when finding by string ID:', err.message);
-      }
-    }
-    
-    // Phương pháp 4: Tạo một ObjectID mới và tìm kiếm
-    if (!flight) {
-      try {
-        console.log('Trying with new ObjectId...');
-        const objectId = new mongoose.Types.ObjectId(flightId);
-        flight = await Flight.findOne({ _id: objectId }).lean();
-        console.log('findOne with new ObjectId result:', flight ? 'Found' : 'Not found');
-      } catch (err) {
-        console.log('Error when finding with new ObjectId:', err.message);
-      }
-    }
-    
-    console.log('Flight found:', flight ? 'Yes' : 'No');
-    
+    const flight = await Flight.findById(req.params.id).lean();
     if (!flight) {
       return res.status(404).json({ message: 'Không tìm thấy chuyến bay' });
     }
-    
-    // Đảm bảo các trường luôn có giá trị
-    if (!flight.images || !Array.isArray(flight.images)) {
-      flight.images = [];
-    }
-    
-    // Đảm bảo dữ liệu thời gian có định dạng đúng
-    if (flight.departure_time && !(flight.departure_time instanceof Date)) {
-      flight.departure_time = new Date(flight.departure_time);
-    }
-    
-    if (flight.arrival_time && !(flight.arrival_time instanceof Date)) {
-      flight.arrival_time = new Date(flight.arrival_time);
-    }
-    
     res.json(flight);
   } catch (error) {
-    console.error('Error in getFlightById:', error);
     res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };
@@ -132,75 +73,57 @@ exports.getFlightById = async (req, res) => {
 // Thêm chuyến bay mới (admin)
 exports.createFlight = async (req, res) => {
   try {
-    console.log('Creating flight with data:', req.body);
-    
-    // Chuyển đổi chuỗi thời gian thành Date
-    const flightData = {
-      ...req.body,
-      departure_time: new Date(req.body.departure_time),
-      arrival_time: new Date(req.body.arrival_time)
-    };
+    const flightData = req.body;
+    const files = req.files;
 
-    const flight = new Flight(flightData);
-    await flight.save();
-    
-    res.status(201).json({
-      message: 'Thêm chuyến bay thành công',
-      flight
+    let imageUrls = [];
+    if (files && files.length > 0) {
+        const uploadPromises = files.map(file => uploadToCloudinary(file));
+        const uploadResults = await Promise.all(uploadPromises);
+        imageUrls = uploadResults.map(result => result.secure_url);
+    }
+
+    const newFlight = new Flight({ 
+        ...flightData, 
+        images: imageUrls 
     });
+    await newFlight.save();
+    res.status(201).json(newFlight);
   } catch (error) {
-    console.error('Error in createFlight:', error);
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(400).json({ message: 'Lỗi khi tạo chuyến bay.', error: error.message });
   }
 };
 
 // Cập nhật thông tin chuyến bay (admin)
 exports.updateFlight = async (req, res) => {
   try {
-    const flightId = req.params.id;
-    
-    if (!mongoose.Types.ObjectId.isValid(flightId)) {
-      return res.status(400).json({ message: 'ID chuyến bay không hợp lệ' });
-    }
-
-    // Chuyển đổi chuỗi thời gian thành Date nếu có
+    const { id } = req.params;
     const updateData = { ...req.body };
-    if (req.body.departure_time) {
-      updateData.departure_time = new Date(req.body.departure_time);
-    }
-    if (req.body.arrival_time) {
-      updateData.arrival_time = new Date(req.body.arrival_time);
+    const files = req.files;
+
+    if (files && files.length > 0) {
+        const uploadPromises = files.map(file => uploadToCloudinary(file));
+        const uploadResults = await Promise.all(uploadPromises);
+        const newImageUrls = uploadResults.map(result => result.secure_url);
+        updateData.images = newImageUrls;
     }
 
-    const flight = await Flight.findByIdAndUpdate(
-      flightId,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    const updatedFlight = await Flight.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
 
-    if (!flight) {
+    if (!updatedFlight) {
       return res.status(404).json({ message: 'Không tìm thấy chuyến bay' });
     }
 
-    res.json({
-      message: 'Cập nhật thông tin chuyến bay thành công',
-      flight
-    });
+    res.status(200).json(updatedFlight);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(400).json({ message: 'Lỗi khi cập nhật chuyến bay.', error: error.message });
   }
 };
 
 // Xóa chuyến bay (admin)
 exports.deleteFlight = async (req, res) => {
   try {
-    const flightId = req.params.id;
-    
-    if (!mongoose.Types.ObjectId.isValid(flightId)) {
-      return res.status(400).json({ message: 'ID chuyến bay không hợp lệ' });
-    }
-
-    const flight = await Flight.findByIdAndDelete(flightId);
+    const flight = await Flight.findByIdAndDelete(req.params.id);
     if (!flight) {
       return res.status(404).json({ message: 'Không tìm thấy chuyến bay' });
     }
@@ -295,5 +218,25 @@ exports.recreateFlights = async (req, res) => {
   } catch (error) {
     console.error('Error in recreateFlights:', error);
     res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+// Bật/tắt trạng thái hiển thị của chuyến bay
+exports.toggleFlightVisibility = async (req, res) => {
+  try {
+    const flight = await Flight.findById(req.params.id);
+    if (!flight) {
+      return res.status(404).json({ message: 'Không tìm thấy chuyến bay.' });
+    }
+
+    flight.isActive = !flight.isActive;
+    await flight.save();
+
+    res.status(200).json({
+      message: `Chuyến bay đã được ${flight.isActive ? 'kích hoạt' : 'vô hiệu hóa'} thành công.`,
+      flight
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server khi thay đổi trạng thái chuyến bay.', error: error.message });
   }
 };

@@ -110,5 +110,24 @@ export const bookingService = {
       console.error('Lỗi khi tạo booking mới:', error);
       throw error;
     }
+  },
+
+  // Đánh dấu booking đã thanh toán (giả lập)
+  async markBookingAsPaid(bookingId: string): Promise<Booking> {
+    try {
+      console.log(`Gọi API đánh dấu booking ${bookingId} là đã thanh toán`);
+      const response = await axiosInstance.post(`/bookings/${bookingId}/mark-as-paid`);
+      
+      // Chuyển đổi payment_status thành lowercase để đồng bộ với frontend
+      const booking = {
+        ...response.data.booking, // API trả về { message, booking }
+        payment_status: response.data.booking.payment_status?.toLowerCase()
+      };
+      
+      return booking;
+    } catch (error) {
+      console.error(`Lỗi khi đánh dấu booking ${bookingId} là đã thanh toán:`, error);
+      throw error;
+    }
   }
 }; 

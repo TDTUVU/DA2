@@ -13,6 +13,13 @@ function createPaymentUrl(paymentInfo, ipAddr) {
   const dateFormat = moment(new Date()).format('YYYYMMDDHHmmss');
   const orderId = `${moment().unix()}_${paymentInfo.booking_id.substring(0, 8)}`;
 
+  console.log('--- VNPAY DEBUGGING ---');
+  console.log('TmnCode đang sử dụng:', vnpayConfig.vnp_TmnCode);
+  console.log('Secret Key (5 ký tự đầu):', vnpayConfig.vnp_HashSecret.substring(0, 5) + '...');
+  console.log('IP Address được gửi đi:', ipAddr);
+  console.log('Return URL được gửi đi:', vnpayConfig.vnp_ReturnUrl);
+  console.log('-------------------------');
+
   const vnp_Params = {
     vnp_Version: vnpayConfig.vnp_Version,
     vnp_Command: vnpayConfig.vnp_Command,
@@ -28,15 +35,33 @@ function createPaymentUrl(paymentInfo, ipAddr) {
     vnp_CreateDate: dateFormat
   };
 
+  console.log('--- VNPay Parameters Before Sorting ---');
+  console.log(JSON.stringify(vnp_Params, null, 2));
+
   // Sắp xếp các tham số theo thứ tự a-z
   const sortedParams = sortObject(vnp_Params);
-  const signData = querystring.stringify(sortedParams, { encode: false });
+  
+  // Tạo chuỗi dữ liệu để ký (signData)
+  // Sử dụng querystring.stringify để đảm bảo encoding đồng nhất thay vì thay thế thủ công.
+  // Điều này sẽ mã hóa các ký tự đặc biệt (VD: khoảng trắng thành '%20') một cách chuẩn hóa.
+  const signData = querystring.stringify(sortedParams);
+  
+  console.log('--- VNPay Sign Data String (Corrected) ---');
+  console.log(signData);
+
   const hmac = crypto.createHmac('sha512', vnpayConfig.vnp_HashSecret);
   const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
   
-  sortedParams['vnp_SecureHash'] = signed;
-  const paymentUrl = `${vnpayConfig.vnp_Url}?${querystring.stringify(sortedParams, { encode: false })}`;
+  // Thêm chữ ký vào danh sách tham số để tạo URL cuối cùng.
+  // querystring.stringify sẽ URL encode các giá trị này.
+  const paramsForUrl = { ...sortedParams };
+  paramsForUrl['vnp_SecureHash'] = signed;
   
+  const paymentUrl = `${vnpayConfig.vnp_Url}?${querystring.stringify(paramsForUrl)}`;
+  
+  console.log('--- Final VNPay URL ---');
+  console.log(paymentUrl);
+
   return paymentUrl;
 }
 
@@ -48,15 +73,17 @@ function createPaymentUrl(paymentInfo, ipAddr) {
 function verifyReturnUrl(vnpParams) {
   const secureHash = vnpParams['vnp_SecureHash'];
   
-  // Xóa tham số mã băm để tính toán lại
   delete vnpParams['vnp_SecureHash'];
-  delete vnpParams['vnp_SecureHashType'];
+  delete vnpParams['vnp_SecureHashType']; // Xóa cả vnp_SecureHashType nếu có
   
-  // Sắp xếp các tham số
   const sortedParams = sortObject(vnpParams);
-  const signData = querystring.stringify(sortedParams, { encode: false });
+  
+  // Tạo chuỗi dữ liệu để ký (signData)
+  // Sử dụng querystring.stringify để đảm bảo encoding đồng nhất khi xác thực chữ ký trả về.
+  const signDataVerify = querystring.stringify(sortedParams);
+  
   const hmac = crypto.createHmac('sha512', vnpayConfig.vnp_HashSecret);
-  const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
+  const signed = hmac.update(Buffer.from(signDataVerify, 'utf-8')).digest('hex');
   
   return secureHash === signed;
 }

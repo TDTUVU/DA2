@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const tourController = require('../controllers/tour.controller');
-const { verifyToken } = require('../middleware/auth');
-const admin = require('../middleware/admin');
+const { verifyToken, isAdmin, softVerifyToken } = require('../middleware/auth.middleware');
+const upload = require('../middleware/upload');
 
 /**
  * @swagger
@@ -51,54 +51,28 @@ const admin = require('../middleware/admin');
  *                   price:
  *                     type: number
  */
-router.get('/', tourController.getAllTours);
+router.get('/', softVerifyToken, tourController.getAllTours);
 
 /**
  * @swagger
- * /api/tours/create-samples:
- *   post:
- *     summary: Tạo dữ liệu mẫu cho tour du lịch
- *     tags: [Tours]
- */
-router.post('/create-samples', tourController.createSampleTours);
-
-/**
- * @swagger
- * /api/tours/destination/{destination}:
+ * /api/tours/{id}:
  *   get:
- *     summary: Lấy danh sách tour theo điểm đến
+ *     summary: Lấy thông tin chi tiết tour
  *     tags: [Tours]
  *     parameters:
  *       - in: path
- *         name: destination
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: Điểm đến
+ *         description: ID của tour
  *     responses:
  *       200:
- *         description: Danh sách tour theo điểm đến
+ *         description: Thông tin chi tiết tour
+ *       404:
+ *         description: Không tìm thấy tour
  */
-router.get('/destination/:destination', tourController.getToursByDestination);
-
-/**
- * @swagger
- * /api/tours/duration/{duration}:
- *   get:
- *     summary: Lấy danh sách tour theo thời gian
- *     tags: [Tours]
- *     parameters:
- *       - in: path
- *         name: duration
- *         required: true
- *         schema:
- *           type: integer
- *         description: Thời gian tour (số ngày)
- *     responses:
- *       200:
- *         description: Danh sách tour theo thời gian
- */
-router.get('/duration/:duration', tourController.getToursByDuration);
+router.get('/:id', tourController.getTourById);
 
 /**
  * @swagger
@@ -153,28 +127,7 @@ router.get('/duration/:duration', tourController.getToursByDuration);
  *       401:
  *         description: Không có quyền truy cập
  */
-router.post('/', verifyToken, admin, tourController.createTour);
-
-/**
- * @swagger
- * /api/tours/{id}:
- *   get:
- *     summary: Lấy thông tin chi tiết tour
- *     tags: [Tours]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID của tour
- *     responses:
- *       200:
- *         description: Thông tin chi tiết tour
- *       404:
- *         description: Không tìm thấy tour
- */
-router.get('/:id', tourController.getTourById);
+router.post('/', verifyToken, isAdmin, upload.array('images', 5), tourController.createTour);
 
 /**
  * @swagger
@@ -225,7 +178,7 @@ router.get('/:id', tourController.getTourById);
  *       404:
  *         description: Không tìm thấy tour
  */
-router.put('/:id', verifyToken, admin, tourController.updateTour);
+router.patch('/:id', verifyToken, isAdmin, upload.array('images', 5), tourController.updateTour);
 
 /**
  * @swagger
@@ -251,18 +204,29 @@ router.put('/:id', verifyToken, admin, tourController.updateTour);
  *       404:
  *         description: Không tìm thấy tour
  */
-router.delete('/:id', verifyToken, admin, tourController.deleteTour);
+router.delete('/:id', verifyToken, isAdmin, tourController.deleteTour);
 
 /**
  * @swagger
- * /api/tours/recreate:
- *   post:
- *     summary: Tạo lại dữ liệu tour
+ * /api/tours/{id}/toggle-visibility:
+ *   patch:
+ *     summary: Bật/tắt trạng thái hiển thị của tour (Admin only)
  *     tags: [Tours]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của tour
  *     responses:
  *       200:
- *         description: Dữ liệu đã được tạo lại thành công
+ *         description: Cập nhật trạng thái thành công
+ *       404:
+ *         description: Không tìm thấy tour
  */
-router.post('/recreate', tourController.recreateTours);
+router.patch('/:id/toggle-visibility', verifyToken, isAdmin, tourController.toggleTourVisibility);
 
 module.exports = router;

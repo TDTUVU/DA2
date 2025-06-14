@@ -21,6 +21,7 @@ interface AuthResponse {
     full_name: string;
     phone_number: string;
     address: string;
+    role: 'user' | 'admin';
   };
 }
 
@@ -102,7 +103,7 @@ export const authService = {
         throw new Error(result.message || 'Failed to get user info');
       }
 
-      return result;
+      return result.user;
     } catch (error) {
       console.error('Get user error:', error);
       throw error;

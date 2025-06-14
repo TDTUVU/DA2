@@ -191,4 +191,27 @@ router.get('/', verifyToken, admin, bookingController.getAllBookings);
  */
 router.put('/:id/status', verifyToken, admin, bookingController.updateBookingStatus);
 
+/**
+ * @swagger
+ * /api/bookings/{bookingId}/mark-as-paid:
+ *   post:
+ *     summary: Đánh dấu booking đã thanh toán (giả lập)
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: bookingId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của booking
+ *     responses:
+ *       200:
+ *         description: Đánh dấu booking đã thanh toán thành công
+ *       401:
+ *         description: Không có quyền truy cập
+ */
+router.post('/:bookingId/mark-as-paid', verifyToken, bookingController.markBookingAsPaid);
+
 module.exports = router;

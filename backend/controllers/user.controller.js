@@ -123,10 +123,53 @@ exports.getUserBookings = async (req, res) => {
 // Lấy danh sách tất cả users (chỉ admin)
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-password');
-    res.json(users);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const role = req.query.role || '';
+
+    let query = {};
+    if (search) {
+      query.$or = [
+        { full_name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+    if (role) {
+      query.role = role;
+    }
+
+    const total = await User.countDocuments(query);
+    const users = await User.find(query)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    res.status(200).json({ users, total, page, pages: Math.ceil(total / limit) });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi server khi lấy danh sách người dùng.', error: error.message });
+  }
+};
+
+// Xóa user bởi admin
+exports.deleteUserByAdmin = async (req, res) => {
+  try {
+    const userIdToDelete = req.params.id;
+    const adminUserId = req.user.id;
+
+    if (userIdToDelete === adminUserId) {
+      return res.status(400).json({ message: 'Bạn không thể tự xóa tài khoản của mình.' });
+    }
+
+    const user = await User.findByIdAndDelete(userIdToDelete);
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng để xóa.' });
+    }
+    res.status(200).json({ message: 'Xóa người dùng thành công.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server khi xóa người dùng.', error: error.message });
   }
 };
 
@@ -155,5 +198,52 @@ exports.updateUserRole = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+// Cập nhật thông tin user bởi admin
+exports.updateUserByAdmin = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { full_name, email, phone_number, address } = req.body;
+
+    // Kiểm tra xem user cần update có tồn tại không
+    const userToUpdate = await User.findById(userId);
+    if (!userToUpdate) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    // Kiểm tra email đã tồn tại chưa (nếu email được cập nhật)
+    if (email && email !== userToUpdate.email) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) {
+        return res.status(400).json({ message: 'Email đã được sử dụng' });
+      }
+    }
+
+    // Tạo object chứa các trường cần update
+    const updateData = {};
+    if (full_name) updateData.full_name = full_name;
+    if (email) updateData.email = email;
+    if (phone_number) updateData.phone_number = phone_number;
+    if (address) updateData.address = address;
+
+    // Cập nhật thông tin user
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json({
+      message: 'Cập nhật thông tin người dùng thành công',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error in updateUserByAdmin:', error);
+    res.status(500).json({ 
+      message: 'Lỗi server khi cập nhật thông tin người dùng',
+      error: error.message 
+    });
   }
 };

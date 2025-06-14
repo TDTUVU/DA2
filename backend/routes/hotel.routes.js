@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../middleware/auth');
-const admin = require('../middleware/admin');
 const hotelController = require('../controllers/hotel.controller');
+const { verifyToken, isAdmin, softVerifyToken } = require('../middleware/auth.middleware');
+const upload = require('../middleware/upload');
 
 /**
  * @swagger
@@ -49,7 +49,7 @@ const hotelController = require('../controllers/hotel.controller');
  *                   rating:
  *                     type: number
  */
-router.get('/', hotelController.getAllHotels);
+router.get('/', softVerifyToken, hotelController.getAllHotels);
 
 /**
  * @swagger
@@ -176,7 +176,7 @@ router.get('/:id', hotelController.getHotelById);
  *       401:
  *         description: Không có quyền truy cập
  */
-router.post('/', verifyToken, admin, hotelController.createHotel);
+router.post('/', verifyToken, isAdmin, upload.array('images', 5), hotelController.createHotel);
 
 /**
  * @swagger
@@ -225,7 +225,7 @@ router.post('/', verifyToken, admin, hotelController.createHotel);
  *       404:
  *         description: Không tìm thấy khách sạn
  */
-router.put('/:id', verifyToken, admin, hotelController.updateHotel);
+router.patch('/:id', verifyToken, isAdmin, upload.array('images', 5), hotelController.updateHotel);
 
 /**
  * @swagger
@@ -251,7 +251,30 @@ router.put('/:id', verifyToken, admin, hotelController.updateHotel);
  *       404:
  *         description: Không tìm thấy khách sạn
  */
-router.delete('/:id', verifyToken, admin, hotelController.deleteHotel);
+router.delete('/:id', verifyToken, isAdmin, hotelController.deleteHotel);
+
+/**
+ * @swagger
+ * /api/hotels/{id}/toggle-visibility:
+ *   patch:
+ *     summary: Bật/tắt trạng thái hiển thị của khách sạn (Admin only)
+ *     tags: [Hotels]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của khách sạn
+ *     responses:
+ *       200:
+ *         description: Cập nhật trạng thái thành công
+ *       404:
+ *         description: Không tìm thấy khách sạn
+ */
+router.patch('/:id/toggle-visibility', verifyToken, isAdmin, hotelController.toggleHotelVisibility);
 
 router.post('/sample-hotels', hotelController.createSampleHotels);
 

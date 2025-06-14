@@ -32,8 +32,7 @@ const FlightList: React.FC = () => {
     const fetchFlights = async () => {
       try {
         const response = await axios.get('/api/flights');
-        console.log('Received flights data:', response.data);
-        setFlights(response.data);
+        setFlights(response.data.flights || []);
       } catch (error) {
         console.error('Error fetching flights:', error);
         toast.error('Không thể tải danh sách chuyến bay');

@@ -29,7 +29,7 @@ const HotelList: React.FC = () => {
     const fetchHotels = async () => {
       try {
         const response = await axios.get('/api/hotels');
-        setHotels(response.data);
+        setHotels(response.data.hotels);
       } catch (error) {
         toast.error('Không thể tải danh sách khách sạn');
       } finally {

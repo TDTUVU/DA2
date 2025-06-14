@@ -33,7 +33,7 @@ const TourList: React.FC = () => {
       try {
         const response = await axios.get('/api/tours');
         console.log('Received tours data:', response.data);
-        setTours(response.data);
+        setTours(response.data.tours);
       } catch (error) {
         console.error('Error fetching tours:', error);
         toast.error('Không thể tải danh sách tour');

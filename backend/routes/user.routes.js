@@ -1,145 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
-const { verifyToken } = require('../middleware/auth');
-const admin = require('../middleware/admin');
-const multer = require('multer');
-const path = require('path');
+const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
 
-// Cấu hình multer để upload ảnh
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, 'public/uploads/');
-    },
-    filename: function (req, file, cb) {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-  }),
-  limits: {
-    fileSize: 5 * 1024 * 1024 // Giới hạn 5MB
-  }
-});
-
-/**
- * @swagger
- * /api/users/profile:
- *   get:
- *     summary: Lấy thông tin profile của user
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Thông tin profile của user
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                 username:
- *                   type: string
- *                 email:
- *                   type: string
- *                 full_name:
- *                   type: string
- *                 phone_number:
- *                   type: string
- *                 address:
- *                   type: string
- *                 images:
- *                   type: string
- *       401:
- *         description: Không có quyền truy cập
- *       404:
- *         description: Không tìm thấy user
- */
+// ===============================================
+// USER ROUTES (Protected)
+// ===============================================
 router.get('/profile', verifyToken, userController.getProfile);
-
-/**
- * @swagger
- * /api/users/profile:
- *   put:
- *     summary: Cập nhật thông tin profile
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               full_name:
- *                 type: string
- *               phone_number:
- *                 type: string
- *               address:
- *                 type: string
- *     responses:
- *       200:
- *         description: Cập nhật thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                 username:
- *                   type: string
- *                 email:
- *                   type: string
- *                 full_name:
- *                   type: string
- *                 phone_number:
- *                   type: string
- *                 address:
- *                   type: string
- *                 images:
- *                   type: string
- *       401:
- *         description: Không có quyền truy cập
- *       404:
- *         description: Không tìm thấy user
- */
-router.put('/profile', verifyToken, upload.single('images'), userController.updateProfile);
-
-/**
- * @swagger
- * /api/users/profile:
- *   delete:
- *     summary: Xóa tài khoản
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Xóa tài khoản thành công
- *       401:
- *         description: Không tìm thấy token xác thực
- */
+router.put('/profile', verifyToken, userController.updateProfile);
 router.delete('/profile', verifyToken, userController.deleteUser);
-
-/**
- * @swagger
- * /api/users/bookings:
- *   get:
- *     summary: Lấy danh sách booking của user
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Danh sách booking
- *       401:
- *         description: Không tìm thấy token xác thực
- */
 router.get('/bookings', verifyToken, userController.getUserBookings);
+
+// ===============================================
+// ADMIN ROUTES (Protected by verifyToken and isAdmin)
+// ===============================================
 
 /**
  * @swagger
@@ -149,13 +23,24 @@ router.get('/bookings', verifyToken, userController.getUserBookings);
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *       - in: query
+ *         name: role
+ *         schema: { type: string }
  *     responses:
  *       200:
  *         description: Danh sách users
- *       401:
- *         description: Không có quyền admin
  */
-router.get('/', verifyToken, admin, userController.getAllUsers);
+router.get('/', verifyToken, isAdmin, userController.getAllUsers);
 
 /**
  * @swagger
@@ -171,21 +56,62 @@ router.get('/', verifyToken, admin, userController.getAllUsers);
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - userId
- *               - role
  *             properties:
- *               userId:
- *                 type: string
- *               role:
- *                 type: string
- *                 enum: [user, admin]
+ *               userId: { type: string }
+ *               role: { type: string, enum: ['user', 'admin'] }
  *     responses:
  *       200:
  *         description: Cập nhật role thành công
- *       401:
- *         description: Không có quyền admin
  */
-router.put('/role', verifyToken, admin, userController.updateUserRole);
+router.put('/role', verifyToken, isAdmin, userController.updateUserRole);
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Xóa một user bởi Admin (Admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Xóa người dùng thành công
+ */
+router.delete('/:id', verifyToken, isAdmin, userController.deleteUserByAdmin);
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   put:
+ *     summary: Cập nhật thông tin user bởi Admin (Admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               full_name: { type: string }
+ *               email: { type: string }
+ *               phone_number: { type: string }
+ *               address: { type: string }
+ *     responses:
+ *       200:
+ *         description: Cập nhật thông tin người dùng thành công
+ */
+router.put('/:id', verifyToken, isAdmin, userController.updateUserByAdmin);
 
 module.exports = router;

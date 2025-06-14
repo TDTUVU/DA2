@@ -191,6 +191,36 @@ const BookingDetails: React.FC = () => {
 
         {/* Content */}
         <div className="p-6">
+          {/* Actions Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-6 pb-6 border-b">
+            {booking.payment_status === 'pending' && (
+              <button
+                onClick={handlePayment}
+                className="w-full sm:w-auto flex items-center justify-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition"
+              >
+                <FiDollarSign className="mr-2" />
+                Thanh toán ngay
+              </button>
+            )}
+            {booking.payment_status === 'pending' && (
+              <button
+                onClick={handleCancelBooking}
+                disabled={cancelling}
+                className="w-full sm:w-auto flex items-center justify-center px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition disabled:opacity-70"
+              >
+                {cancelling ? (
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <FiTrash2 className="mr-2" />
+                )}
+                {cancelling ? 'Đang hủy...' : 'Hủy booking'}
+              </button>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Thông tin chính */}
             <div>
@@ -306,38 +336,6 @@ const BookingDetails: React.FC = () => {
 
           {/* Actions */}
           <div className="mt-8 flex flex-col sm:flex-row sm:justify-between items-center gap-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              {booking.payment_status === 'pending' && (
-                <button
-                  onClick={handlePayment}
-                  className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-                >
-                  <FiDollarSign className="mr-2" />
-                  Thanh toán ngay
-                </button>
-              )}
-              
-              {booking.payment_status !== 'cancelled' && (
-                <button
-                  onClick={handleCancelBooking}
-                  disabled={cancelling}
-                  className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition disabled:bg-gray-400"
-                >
-                  {cancelling ? (
-                    <>
-                      <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>
-                      Đang hủy...
-                    </>
-                  ) : (
-                    <>
-                      <FiTrash2 className="mr-2" />
-                      Hủy booking
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-            
             {booking.payment_status === 'pending' && (
               <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 w-full sm:w-auto">
                 <div className="flex">
