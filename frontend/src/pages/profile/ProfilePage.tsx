@@ -14,7 +14,7 @@ interface UserProfile {
   full_name?: string;
   phone_number?: string;
   address?: string;
-  images?: string;
+  avatar?: string;
 }
 
 type TabType = 'profile' | 'bookings' | 'favorites' | 'settings';
@@ -28,7 +28,7 @@ const ProfilePage = () => {
     full_name: '',
     phone_number: '',
     address: '',
-    images: ''
+    avatar: ''
   });
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -64,8 +64,8 @@ const ProfilePage = () => {
 
         const data = await response.json();
         setProfile(data);
-        if (data.images) {
-          setPreviewUrl(`${API_BASE_URL}${data.images}`);
+        if (data.avatar) {
+          setPreviewUrl(data.avatar);
         }
       } catch (error: any) {
         console.error('Error fetching profile:', error);
@@ -110,20 +110,18 @@ const ProfilePage = () => {
         throw new Error('Không tìm thấy token xác thực');
       }
 
-      const formData = new FormData();
-      formData.append('full_name', profile.full_name || '');
-      formData.append('phone_number', profile.phone_number || '');
-      formData.append('address', profile.address || '');
-      if (selectedImage) {
-        formData.append('images', selectedImage);
-      }
-
+      // Cập nhật thông tin cơ bản
       const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-        body: formData
+        body: JSON.stringify({
+          full_name: profile.full_name || '',
+          phone_number: profile.phone_number || '',
+          address: profile.address || '',
+        })
       });
 
       if (!response.ok) {
@@ -133,9 +131,37 @@ const ProfilePage = () => {
 
       const updatedUser = await response.json();
       setProfile(updatedUser);
-      if (updatedUser.images) {
-        setPreviewUrl(`${API_BASE_URL}${updatedUser.images}`);
+
+      // Nếu có ảnh mới, upload riêng
+      if (selectedImage) {
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(selectedImage);
+        });
+
+        const avatarResponse = await fetch(`${API_BASE_URL}/api/users/profile/avatar`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            avatar: await base64Promise
+          })
+        });
+
+        if (!avatarResponse.ok) {
+          throw new Error('Không thể cập nhật avatar');
+        }
+
+        const avatarData = await avatarResponse.json();
+        setProfile(prev => ({ ...prev, avatar: avatarData.avatar }));
+        setPreviewUrl(avatarData.avatar);
+        setSelectedImage(null);
       }
+
       toast.success('Cập nhật thông tin thành công!');
     } catch (error: any) {
       toast.error(error.message || 'Cập nhật thông tin thất bại');
@@ -152,19 +178,61 @@ const ProfilePage = () => {
     e.preventDefault();
     setPasswordError('');
     setPasswordSuccess('');
+
+    // Validate input
     if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
       setPasswordError('Vui lòng điền đầy đủ thông tin!');
       return;
     }
+
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       setPasswordError('Mật khẩu mới không khớp!');
       return;
     }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('Mật khẩu mới phải có ít nhất 6 ký tự!');
+      return;
+    }
+
     setIsChangingPassword(true);
     try {
-      await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
-      setPasswordSuccess('Đổi mật khẩu thành công!');
-      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Không tìm thấy token xác thực');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/users/profile/change-password`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Đổi mật khẩu thất bại');
+      }
+
+      setPasswordSuccess('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.');
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+
+      // Đợi 2 giây trước khi logout để người dùng có thể đọc thông báo
+      setTimeout(() => {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }, 2000);
+
     } catch (error: any) {
       setPasswordError(error.message || 'Đổi mật khẩu thất bại');
     } finally {

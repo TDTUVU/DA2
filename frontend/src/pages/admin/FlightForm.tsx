@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { Flight } from '../../types/flight.types';
 import { format } from 'date-fns';
+import { FiTrash2 } from 'react-icons/fi';
 
 type FlightFormData = Omit<Flight, 'images'> & {
-  images: string[] | FileList;
+  images: FileList | string[];
 };
 
 interface FlightFormProps {
@@ -13,17 +14,12 @@ interface FlightFormProps {
   isSubmitting: boolean;
 }
 
-const formatDateForInput = (dateString?: string) => {
-  if (!dateString) return '';
-  try {
-    return format(new Date(dateString), "yyyy-MM-dd'T'HH:mm");
-  } catch (error) {
-    return '';
-  }
-};
+function formatDateForInput(date: string | Date): string {
+  return format(new Date(date), "yyyy-MM-dd'T'HH:mm");
+}
 
 const FlightForm: React.FC<FlightFormProps> = ({ onSubmit, initialData, isSubmitting }) => {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<FlightFormData>({
+  const { register, handleSubmit, watch, setValue } = useForm<FlightFormData>({
     defaultValues: initialData ? {
       ...initialData,
       departure_time: formatDateForInput(initialData.departure_time),
@@ -31,20 +27,28 @@ const FlightForm: React.FC<FlightFormProps> = ({ onSubmit, initialData, isSubmit
     } : {},
   });
 
-  const [imagePreview, setImagePreview] = useState<string | null>(
-    initialData?.images && typeof initialData.images[0] === 'string' ? initialData.images[0] : null
+  const [imagePreviews, setImagePreviews] = useState<string[]>(
+    initialData?.images && Array.isArray(initialData.images) ? initialData.images : []
   );
-  const imageFiles = watch('images' as any);
+  const imageFiles = watch('images');
 
   useEffect(() => {
-    if (imageFiles && imageFiles.length > 0 && imageFiles[0] instanceof File) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(imageFiles[0]);
-    } else if (initialData?.images && typeof initialData.images[0] === 'string') {
-      setImagePreview(initialData.images[0]);
+    if (imageFiles instanceof FileList && imageFiles.length > 0) {
+      const newPreviews: string[] = [];
+      Array.from(imageFiles).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === 'string') {
+            newPreviews.push(reader.result);
+            setImagePreviews([...newPreviews]);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    } else if (initialData?.images && Array.isArray(initialData.images)) {
+      setImagePreviews(initialData.images);
     } else {
-      setImagePreview(null);
+      setImagePreviews([]);
     }
   }, [imageFiles, initialData]);
 
@@ -56,15 +60,30 @@ const FlightForm: React.FC<FlightFormProps> = ({ onSubmit, initialData, isSubmit
       const value = data[key as keyof FlightFormData];
       if (key === 'images') {
         if (value instanceof FileList) {
-          for (let i = 0; i < value.length; i++) {
-            formData.append('images', value[i]);
-          }
+          Array.from(value).forEach(file => {
+            formData.append('images', file);
+          });
+        } else if (Array.isArray(value)) {
+          // Nếu là mảng string (ảnh cũ), thêm vào formData dưới dạng JSON
+          formData.append('existingImages', JSON.stringify(value));
         }
       } else if (value !== null && value !== undefined) {
         formData.append(key, String(value));
       }
     });
     onSubmit(formData);
+  };
+
+  const handleRemoveImage = (index: number) => {
+    const newPreviews = [...imagePreviews];
+    newPreviews.splice(index, 1);
+    setImagePreviews(newPreviews);
+    
+    if (initialData?.images) {
+      const newImages = Array.isArray(initialData.images) ? [...initialData.images] : [];
+      newImages.splice(index, 1);
+      setValue('images', newImages);
+    }
   };
 
   return (
@@ -94,11 +113,11 @@ const FlightForm: React.FC<FlightFormProps> = ({ onSubmit, initialData, isSubmit
           <label htmlFor="arrival_time" className="block text-sm font-medium text-gray-700">Giờ hạ cánh</label>
           <input id="arrival_time" type="datetime-local" {...register('arrival_time', { required: true })} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
         </div>
-        <div>
+        <div className="sm:col-span-1">
           <label htmlFor="price" className="block text-sm font-medium text-gray-700">Giá vé (VND)</label>
           <input id="price" type="number" {...register('price', { required: true, valueAsNumber: true })} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
         </div>
-        <div>
+        <div className="sm:col-span-1">
           <label htmlFor="available_seats" className="block text-sm font-medium text-gray-700">Số ghế trống</label>
           <input id="available_seats" type="number" {...register('available_seats', { required: true, valueAsNumber: true })} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
         </div>
@@ -106,15 +125,50 @@ const FlightForm: React.FC<FlightFormProps> = ({ onSubmit, initialData, isSubmit
           <label htmlFor="rating" className="block text-sm font-medium text-gray-700">Đánh giá (0-5)</label>
           <input id="rating" type="number" step="0.1" {...register('rating', { required: true, valueAsNumber: true, min: 0, max: 5 })} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
         </div>
+
         <div className="sm:col-span-2">
           <label htmlFor="images" className="block text-sm font-medium text-gray-700">Hình ảnh</label>
-          <input id="images" type="file" {...register('images')} accept="image/*" multiple className="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg" />
-          {imagePreview && <img src={imagePreview} alt="Xem trước" className="mt-4 h-40 w-auto object-cover rounded-lg shadow" />}
+          <input
+            type="file"
+            id="images"
+            {...register('images')}
+            accept="image/*"
+            multiple
+            className="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
+          />
+          {imagePreviews.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {imagePreviews.map((preview, index) => (
+                <div key={index} className="relative group">
+                  <img 
+                    src={preview} 
+                    alt={`Xem trước ${index + 1}`} 
+                    className="h-40 w-full object-cover rounded-lg shadow"
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                    <button
+                      type="button"
+                      title={`Xóa ảnh ${index + 1}`}
+                      onClick={() => handleRemoveImage(index)}
+                      className="text-white hover:text-red-500 transition-colors"
+                    >
+                      <FiTrash2 size={20} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+      
       <div className="pt-5">
         <div className="flex justify-end">
-          <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-8 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-8 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+          >
             {isSubmitting ? 'Đang lưu...' : 'Lưu'}
           </button>
         </div>

@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  passwordChangedAt: {
+    type: Date,
+    default: null
+  },
   role: {
     type: String,
     enum: ['user', 'admin'],
@@ -36,6 +40,14 @@ const userSchema = new mongoose.Schema({
   address: {
     type: String,
     trim: true
+  },
+  avatar: {
+    type: String,
+    default: null
+  },
+  avatar_public_id: {
+    type: String,
+    default: null
   },
   images: [{
     type: String

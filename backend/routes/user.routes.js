@@ -8,6 +8,8 @@ const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
 // ===============================================
 router.get('/profile', verifyToken, userController.getProfile);
 router.put('/profile', verifyToken, userController.updateProfile);
+router.put('/profile/avatar', verifyToken, userController.updateAvatar);
+router.put('/profile/change-password', verifyToken, userController.changePassword);
 router.delete('/profile', verifyToken, userController.deleteUser);
 router.get('/bookings', verifyToken, userController.getUserBookings);
 

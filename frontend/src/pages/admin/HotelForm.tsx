@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { Hotel } from '../../types/hotel.types';
+import { FiTrash2 } from 'react-icons/fi';
 
 // New type for form data
 type HotelFormData = Omit<Hotel, 'amenities'> & {
@@ -14,25 +15,31 @@ interface HotelFormProps {
 }
 
 const HotelForm: React.FC<HotelFormProps> = ({ onSubmit, initialData, isSubmitting }) => {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<HotelFormData>({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<HotelFormData>({
     defaultValues: initialData ? {
       ...initialData,
       amenities: Array.isArray(initialData.amenities) ? initialData.amenities.join(', ') : '',
     } : {},
   });
 
-  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.images?.[0] || null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>(initialData?.images || []);
   const imageFiles = watch('images' as any);
 
   useEffect(() => {
     if (imageFiles && imageFiles.length > 0 && imageFiles[0] instanceof File) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(imageFiles[0]);
-    } else if (initialData?.images?.[0]) {
-      setImagePreview(initialData.images[0]);
+      const newPreviews: string[] = [];
+      Array.from(imageFiles).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          newPreviews.push(reader.result as string);
+          setImagePreviews([...newPreviews]);
+        };
+        reader.readAsDataURL(file as Blob);
+      });
+    } else if (initialData?.images?.length) {
+      setImagePreviews(initialData.images);
     } else {
-      setImagePreview(null);
+      setImagePreviews([]);
     }
   }, [imageFiles, initialData]);
 
@@ -150,7 +157,40 @@ const HotelForm: React.FC<HotelFormProps> = ({ onSubmit, initialData, isSubmitti
             multiple
             className="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
           />
-          {imagePreview && <img src={imagePreview} alt="Xem trước" className="mt-4 h-40 w-auto object-cover rounded-lg shadow" />}
+          {imagePreviews.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {imagePreviews.map((preview, index) => (
+                <div key={index} className="relative group">
+                  <img 
+                    src={preview} 
+                    alt={`Xem trước ${index + 1}`} 
+                    className="h-40 w-full object-cover rounded-lg shadow"
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                    <button
+                      type="button"
+                      title={`Xóa ảnh ${index + 1}`}
+                      onClick={() => {
+                        const newPreviews = [...imagePreviews];
+                        newPreviews.splice(index, 1);
+                        setImagePreviews(newPreviews);
+                        
+                        // Nếu đang ở chế độ sửa, cập nhật giá trị của initialData.images
+                        if (initialData?.images) {
+                          const newImages = [...initialData.images];
+                          newImages.splice(index, 1);
+                          setValue('images', newImages);
+                        }
+                      }}
+                      className="text-white hover:text-red-500 transition-colors"
+                    >
+                      <FiTrash2 size={20} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       

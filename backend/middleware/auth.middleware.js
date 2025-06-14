@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   try {
     // Lấy token từ header
     const token = req.headers.authorization?.split(' ')[1];
@@ -12,6 +13,25 @@ const verifyToken = (req, res, next) => {
     // Xác thực token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
+    // Kiểm tra user có tồn tại không
+    const user = await User.findById(decoded._id);
+    if (!user) {
+      return res.status(401).json({ message: 'Người dùng không tồn tại' });
+    }
+
+    // Kiểm tra nếu user đã đổi mật khẩu sau khi token được tạo
+    if (user.passwordChangedAt) {
+      const tokenTimestamp = decoded.iat;
+      const passwordChangedTimestamp = Math.floor(user.passwordChangedAt.getTime() / 1000);
+      
+      if (passwordChangedTimestamp > tokenTimestamp) {
+        return res.status(401).json({ 
+          message: 'Phiên đăng nhập đã hết hạn do mật khẩu đã được thay đổi',
+          code: 'PASSWORD_CHANGED'
+        });
+      }
+    }
+
     // Thêm thông tin user vào request
     req.user = decoded;
     
