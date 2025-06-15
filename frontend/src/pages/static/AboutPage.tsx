@@ -1,5 +1,15 @@
 import React from 'react';
 import { FaUsers, FaGlobe, FaHandshake, FaShieldAlt } from 'react-icons/fa';
+// @ts-ignore
+import team1 from '../../assets/6.jpg';
+// @ts-ignore
+import team2 from '../../assets/7.jpg';
+// @ts-ignore
+import team3 from '../../assets/8.jpg';
+// @ts-ignore
+import team4 from '../../assets/9.jpg';
+// @ts-ignore
+import aboutBg from '../../assets/10.jpg';
 
 const AboutPage: React.FC = () => {
   return (
@@ -21,7 +31,7 @@ const AboutPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:flex items-center gap-12">
             <div className="lg:w-1/2 mb-8 lg:mb-0">
-              <div className="bg-gray-200 h-96 rounded-xl"></div>
+              <img src={aboutBg} alt="Về chúng tôi" className="w-full h-96 object-cover rounded-xl" />
             </div>
             <div className="lg:w-1/2">
               <h2 className="text-3xl font-bold mb-6">Câu Chuyện Của Chúng Tôi</h2>
@@ -100,26 +110,23 @@ const AboutPage: React.FC = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center">
-              <div className="h-64 bg-gray-200 rounded-xl mb-4"></div>
-              <h3 className="text-xl font-semibold">Nguyễn Văn A</h3>
+              <img src={team1} alt="Nguyễn Văn A" className="h-64 w-full object-cover rounded-xl mb-4" />
+              <h3 className="text-xl font-semibold">Nguyễn Văn Đức</h3>
               <p className="text-blue-600">Giám đốc điều hành</p>
             </div>
-            
             <div className="text-center">
-              <div className="h-64 bg-gray-200 rounded-xl mb-4"></div>
-              <h3 className="text-xl font-semibold">Trần Thị B</h3>
+              <img src={team2} alt="Trần Thị B" className="h-64 w-full object-cover rounded-xl mb-4" />
+              <h3 className="text-xl font-semibold">Trần Thị Thùy Dung</h3>
               <p className="text-blue-600">Giám đốc marketing</p>
             </div>
-            
             <div className="text-center">
-              <div className="h-64 bg-gray-200 rounded-xl mb-4"></div>
-              <h3 className="text-xl font-semibold">Lê Văn C</h3>
+              <img src={team3} alt="Lê Văn C" className="h-64 w-full object-cover rounded-xl mb-4" />
+              <h3 className="text-xl font-semibold">Lê Văn Đô</h3>
               <p className="text-blue-600">Trưởng phòng tour</p>
             </div>
-            
             <div className="text-center">
-              <div className="h-64 bg-gray-200 rounded-xl mb-4"></div>
-              <h3 className="text-xl font-semibold">Phạm Thị D</h3>
+              <img src={team4} alt="Phạm Thị D" className="h-64 w-full object-cover rounded-xl mb-4" />
+              <h3 className="text-xl font-semibold">Phạm Thị Bích</h3>
               <p className="text-blue-600">Trưởng phòng chăm sóc khách hàng</p>
             </div>
           </div>

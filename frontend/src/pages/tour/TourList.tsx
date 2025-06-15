@@ -57,9 +57,9 @@ const TourList: React.FC = () => {
         description.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesPrice = filterPrice === 'all' || 
-        (filterPrice === 'low' && tour.price_per_person < 100) ||
-        (filterPrice === 'medium' && tour.price_per_person >= 100 && tour.price_per_person < 200) ||
-        (filterPrice === 'high' && tour.price_per_person >= 200);
+        (filterPrice === 'low' && tour.price_per_person < 1000000) ||
+        (filterPrice === 'medium' && tour.price_per_person >= 1000000 && tour.price_per_person < 3000000) ||
+        (filterPrice === 'high' && tour.price_per_person >= 3000000);
       
       return matchesSearch && matchesPrice;
     })
@@ -116,9 +116,9 @@ const TourList: React.FC = () => {
               title="Chọn khoảng giá"
             >
               <option value="all">Tất cả giá</option>
-              <option value="low">Dưới 100$</option>
-              <option value="medium">100$ - 200$</option>
-              <option value="high">Trên 200$</option>
+              <option value="low">Dưới 1.000.000₫</option>
+              <option value="medium">1.000.000₫ - 3.000.000₫</option>
+              <option value="high">Trên 3.000.000₫</option>
             </select>
           </div>
 
@@ -179,7 +179,7 @@ const TourList: React.FC = () => {
 
                 <div className="flex items-center text-gray-600 mb-2">
                   <FiDollarSign className="mr-2" />
-                  <span>{tour.price_per_person?.toLocaleString() || 0} USD/người</span>
+                  <span>{tour.price_per_person?.toLocaleString('vi-VN') || 0} VND/người</span>
                 </div>
 
                 <div className="flex items-center text-gray-600 mb-4">

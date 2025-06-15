@@ -105,9 +105,9 @@ const HotelList: React.FC = () => {
               title="Chọn khoảng giá"
             >
               <option value="all">Tất cả giá</option>
-              <option value="low">Dưới 1 triệu</option>
-              <option value="medium">1 - 3 triệu</option>
-              <option value="high">Trên 3 triệu</option>
+              <option value="low">Dưới 1.000.000₫</option>
+              <option value="medium">1.000.000₫ - 3.000.000₫</option>
+              <option value="high">Trên 3.000.000₫</option>
             </select>
           </div>
 
@@ -152,7 +152,7 @@ const HotelList: React.FC = () => {
 
               <div className="flex items-center text-gray-600 mb-2">
                 <FiDollarSign className="mr-2" />
-                <span>{hotel.price_per_night.toLocaleString()} VND/đêm</span>
+                <span>{hotel.price_per_night.toLocaleString('vi-VN')} VND/đêm</span>
               </div>
 
               <div className="flex items-center text-gray-600 mb-4">

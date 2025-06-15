@@ -234,7 +234,7 @@ const FlightDetails: React.FC = () => {
                   <FiDollarSign className="text-gray-500 mr-2" />
                   <div>
                     <p className="text-sm text-gray-500">Giá vé</p>
-                    <p className="text-xl font-semibold">{flight.price.toLocaleString()} USD</p>
+                    <p className="text-xl font-semibold">{flight.price.toLocaleString('vi-VN')} VND</p>
                   </div>
                 </div>
 

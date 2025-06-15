@@ -11,9 +11,9 @@ interface HotelFormProps {
 interface HotelFormData {
   name: string;
   description: string;
-  address: string;
-  city: string;
-  price: number;
+  location: string;
+  price_per_night: number;
+  available_rooms: number;
   rating?: number;
   amenities: string[];
   images?: FileList | string[];
@@ -23,7 +23,7 @@ interface HotelFormData {
 }
 
 const HotelForm: React.FC<HotelFormProps> = ({ onSubmit, initialData, isSubmitting }) => {
-  const { register, handleSubmit, setValue } = useForm<HotelFormData>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<HotelFormData>({
     defaultValues: initialData || {},
   });
 
@@ -70,7 +70,7 @@ const HotelForm: React.FC<HotelFormProps> = ({ onSubmit, initialData, isSubmitti
       if (key === '_id' || key === 'createdAt' || key === 'updatedAt' || key === 'images') return;
       const value = data[key as keyof HotelFormData];
       if (Array.isArray(value)) {
-        formData.append(key, JSON.stringify(value));
+        value.forEach(item => formData.append(key, item));
       } else if (value !== null && value !== undefined) {
         formData.append(key, String(value));
       }
@@ -97,9 +97,10 @@ const HotelForm: React.FC<HotelFormProps> = ({ onSubmit, initialData, isSubmitti
           <input
             type="text"
             id="name"
-            {...register('name')}
+            {...register('name', { required: 'Tên khách sạn là bắt buộc' })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
+          {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
         </div>
 
         <div className="sm:col-span-2">
@@ -112,34 +113,43 @@ const HotelForm: React.FC<HotelFormProps> = ({ onSubmit, initialData, isSubmitti
           />
         </div>
 
-        <div>
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700">Địa chỉ</label>
+        <div className="sm:col-span-2">
+          <label htmlFor="location" className="block text-sm font-medium text-gray-700">Địa điểm</label>
           <input
             type="text"
-            id="address"
-            {...register('address')}
+            id="location"
+            {...register('location', { required: 'Địa điểm là bắt buộc' })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
+          {errors.location && <p className="mt-1 text-sm text-red-600">{errors.location.message}</p>}
         </div>
 
         <div>
-          <label htmlFor="city" className="block text-sm font-medium text-gray-700">Thành phố</label>
-          <input
-            type="text"
-            id="city"
-            {...register('city')}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="price" className="block text-sm font-medium text-gray-700">Giá phòng</label>
+          <label htmlFor="price_per_night" className="block text-sm font-medium text-gray-700">Giá phòng mỗi đêm</label>
           <input
             type="number"
-            id="price"
-            {...register('price')}
+            id="price_per_night"
+            {...register('price_per_night', { 
+              required: 'Giá phòng là bắt buộc', 
+              min: { value: 1, message: 'Giá phòng phải lớn hơn 0' }
+            })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
+          {errors.price_per_night && <p className="mt-1 text-sm text-red-600">{errors.price_per_night.message}</p>}
+        </div>
+
+        <div>
+          <label htmlFor="available_rooms" className="block text-sm font-medium text-gray-700">Số phòng trống</label>
+          <input
+            type="number"
+            id="available_rooms"
+            {...register('available_rooms', { 
+              required: 'Số phòng trống là bắt buộc', 
+              min: { value: 0, message: 'Số phòng không được âm' }
+            })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          />
+          {errors.available_rooms && <p className="mt-1 text-sm text-red-600">{errors.available_rooms.message}</p>}
         </div>
 
         <div>
@@ -150,9 +160,14 @@ const HotelForm: React.FC<HotelFormProps> = ({ onSubmit, initialData, isSubmitti
             step="0.1"
             min="0"
             max="5"
-            {...register('rating')}
+            {...register('rating', { 
+              required: 'Đánh giá là bắt buộc', 
+              min: { value: 0, message: 'Đánh giá tối thiểu là 0' },
+              max: { value: 5, message: 'Đánh giá tối đa là 5' }
+            })}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
+          {errors.rating && <p className="mt-1 text-sm text-red-600">{errors.rating.message}</p>}
         </div>
 
         <div className="sm:col-span-2">

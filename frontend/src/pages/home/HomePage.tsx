@@ -1,13 +1,31 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaPlane, FaHotel, FaMapMarkedAlt, FaStar } from 'react-icons/fa';
+// @ts-ignore
+import heroBg from '../../assets/1.jpg';
+// @ts-ignore
+import danangImg from '../../assets/2.jpg';
+// @ts-ignore
+import phuquocImg from '../../assets/3.jpg';
+// @ts-ignore
+import halongImg from '../../assets/4.jpg';
+// @ts-ignore
+import dalatImg from '../../assets/5.jpg';
+// @ts-ignore
+import customer1 from '../../assets/11.jpg';
+// @ts-ignore
+import customer2 from '../../assets/12.jpg';
+// @ts-ignore
+import customer3 from '../../assets/13.jpg';
 
 const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
       <div className="relative bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
+        {/* Ảnh nền lớn */}
+        <img src={heroBg} alt="Hero Background" className="absolute inset-0 w-full h-full object-cover z-0 opacity-70" style={{height: '100%', maxHeight: 500}} />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 z-10">
           <div className="md:w-3/5">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">Khám Phá Những Điểm Đến Tuyệt Vời</h1>
             <p className="text-xl mb-8">Đặt chuyến đi mơ ước của bạn và tạo những kỷ niệm không thể quên cùng dịch vụ du lịch hàng đầu của chúng tôi</p>
@@ -64,8 +82,10 @@ const HomePage: React.FC = () => {
           <p className="text-gray-600 text-center mb-12 max-w-3xl mx-auto">Khám phá những điểm đến tuyệt vời nhất mà khách hàng của chúng tôi yêu thích</p>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Đà Nẵng */}
             <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-              <div className="h-48 bg-gray-300 relative">
+              <div className="h-48 relative">
+                <img src={danangImg} alt="Đà Nẵng" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                 <div className="absolute bottom-3 left-3 text-white font-bold">Đà Nẵng</div>
               </div>
@@ -78,8 +98,10 @@ const HomePage: React.FC = () => {
               </div>
             </div>
             
+            {/* Phú Quốc */}
             <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-              <div className="h-48 bg-gray-300 relative">
+              <div className="h-48 relative">
+                <img src={phuquocImg} alt="Phú Quốc" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                 <div className="absolute bottom-3 left-3 text-white font-bold">Phú Quốc</div>
               </div>
@@ -92,8 +114,10 @@ const HomePage: React.FC = () => {
               </div>
             </div>
             
+            {/* Hạ Long */}
             <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-              <div className="h-48 bg-gray-300 relative">
+              <div className="h-48 relative">
+                <img src={halongImg} alt="Hạ Long" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                 <div className="absolute bottom-3 left-3 text-white font-bold">Hạ Long</div>
               </div>
@@ -106,8 +130,10 @@ const HomePage: React.FC = () => {
               </div>
             </div>
             
+            {/* Đà Lạt */}
             <div className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-              <div className="h-48 bg-gray-300 relative">
+              <div className="h-48 relative">
+                <img src={dalatImg} alt="Đà Lạt" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                 <div className="absolute bottom-3 left-3 text-white font-bold">Đà Lạt</div>
               </div>
@@ -141,9 +167,9 @@ const HomePage: React.FC = () => {
               </div>
               <p className="text-gray-600 mb-4">"Dịch vụ tuyệt vời! Chuyến đi Đà Nẵng của gia đình tôi thật hoàn hảo nhờ sự tư vấn và hỗ trợ chuyên nghiệp."</p>
               <div className="flex items-center">
-                <div className="w-10 h-10 bg-gray-300 rounded-full mr-3"></div>
+                <img src={customer1} alt="Nguyễn Văn A" className="w-10 h-10 rounded-full object-cover mr-3" />
                 <div>
-                  <h4 className="font-medium">Nguyễn Văn A</h4>
+                  <h4 className="font-medium">Nguyễn Tiên Phong</h4>
                   <p className="text-sm text-gray-500">Hà Nội</p>
                 </div>
               </div>
@@ -155,9 +181,9 @@ const HomePage: React.FC = () => {
               </div>
               <p className="text-gray-600 mb-4">"Khách sạn đẹp, giá tốt và dịch vụ hỗ trợ nhanh chóng. Tôi sẽ tiếp tục sử dụng dịch vụ của công ty trong tương lai."</p>
               <div className="flex items-center">
-                <div className="w-10 h-10 bg-gray-300 rounded-full mr-3"></div>
+                <img src={customer2} alt="Trần Thị B" className="w-10 h-10 rounded-full object-cover mr-3" />
                 <div>
-                  <h4 className="font-medium">Trần Thị B</h4>
+                  <h4 className="font-medium">Lương Thị Phượng</h4>
                   <p className="text-sm text-gray-500">TP.HCM</p>
                 </div>
               </div>
@@ -169,9 +195,9 @@ const HomePage: React.FC = () => {
               </div>
               <p className="text-gray-600 mb-4">"Tour Phú Quốc 4 ngày 3 đêm thật tuyệt vời. Hướng dẫn viên nhiệt tình, lịch trình hợp lý và dịch vụ chu đáo."</p>
               <div className="flex items-center">
-                <div className="w-10 h-10 bg-gray-300 rounded-full mr-3"></div>
+                <img src={customer3} alt="Lê Văn C" className="w-10 h-10 rounded-full object-cover mr-3" />
                 <div>
-                  <h4 className="font-medium">Lê Văn C</h4>
+                  <h4 className="font-medium">Nguyễn Hoài Thanh</h4>
                   <p className="text-sm text-gray-500">Đà Nẵng</p>
                 </div>
               </div>

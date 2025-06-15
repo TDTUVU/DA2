@@ -79,9 +79,9 @@ const FlightList: React.FC = () => {
         flight.flight_name?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesPrice = filterPrice === 'all' || 
-        (filterPrice === 'low' && flight.price < 100) ||
-        (filterPrice === 'medium' && flight.price >= 100 && flight.price < 200) ||
-        (filterPrice === 'high' && flight.price >= 200);
+        (filterPrice === 'low' && flight.price < 1000000) ||
+        (filterPrice === 'medium' && flight.price >= 1000000 && flight.price < 3000000) ||
+        (filterPrice === 'high' && flight.price >= 3000000);
       
       return matchesSearch && matchesPrice;
     })
@@ -138,9 +138,9 @@ const FlightList: React.FC = () => {
               title="Chọn khoảng giá"
             >
               <option value="all">Tất cả giá</option>
-              <option value="low">Dưới 100$</option>
-              <option value="medium">100$ - 200$</option>
-              <option value="high">Trên 200$</option>
+              <option value="low">Dưới 1.000.000₫</option>
+              <option value="medium">1.000.000₫ - 3.000.000₫</option>
+              <option value="high">Trên 3.000.000₫</option>
             </select>
           </div>
 
@@ -212,7 +212,7 @@ const FlightList: React.FC = () => {
 
                   <div className="flex items-center text-gray-600 mb-2">
                     <FiDollarSign className="mr-2" />
-                    <span>{flight.price.toLocaleString()} USD</span>
+                    <span>{flight.price.toLocaleString('vi-VN')} VND</span>
                   </div>
 
                   <div className="flex items-center text-gray-600 mb-4">

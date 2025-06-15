@@ -200,7 +200,7 @@ const TourDetails: React.FC = () => {
                   <FiDollarSign className="text-gray-500 mr-2" />
                   <div>
                     <p className="text-sm text-gray-500">Giá tour</p>
-                    <p className="text-xl font-semibold">{tour.price_per_person.toLocaleString()} USD/người</p>
+                    <p className="text-xl font-semibold">{tour.price_per_person.toLocaleString('vi-VN')} VND/người</p>
                   </div>
                 </div>
 

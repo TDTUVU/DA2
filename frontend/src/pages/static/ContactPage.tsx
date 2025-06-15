@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { FaPhone, FaEnvelope, FaMapMarkerAlt, FaClock } from 'react-icons/fa';
+// @ts-ignore
+import mapImg from '../../assets/14.jpg';
 
 const ContactPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -58,7 +60,7 @@ const ContactPage: React.FC = () => {
                   <FaMapMarkerAlt className="mr-4 text-xl" />
                   <div>
                     <h3 className="font-medium">Địa Chỉ</h3>
-                    <p>123 Đường ABC, Quận 1, TP. Hồ Chí Minh</p>
+                    <p>29 An Dương, quận Tây Hồ, thành phố Hà Nội</p>
                   </div>
                 </div>
                 
@@ -66,7 +68,7 @@ const ContactPage: React.FC = () => {
                   <FaPhone className="mr-4 text-xl" />
                   <div>
                     <h3 className="font-medium">Điện Thoại</h3>
-                    <p>+84 123 456 789</p>
+                    <p>+84 819 367 571</p>
                   </div>
                 </div>
                 
@@ -209,12 +211,7 @@ const ContactPage: React.FC = () => {
       
       {/* Map Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="bg-gray-200 h-96 rounded-xl w-full">
-          {/* Placeholder for Google Map */}
-          <div className="h-full flex items-center justify-center">
-            <p className="text-gray-500">Bản đồ Google sẽ được hiển thị ở đây</p>
-          </div>
-        </div>
+        <img src={mapImg} alt="Bản đồ" className="w-full h-96 object-cover rounded-xl" />
       </div>
     </div>
   );

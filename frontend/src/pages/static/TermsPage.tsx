@@ -137,8 +137,8 @@ const TermsPage: React.FC = () => {
             </p>
             <ul>
               <li>Email: info@travelwebsite.com</li>
-              <li>Điện thoại: +84 123 456 789</li>
-              <li>Địa chỉ: 123 Đường ABC, Quận 1, TP. Hồ Chí Minh</li>
+              <li>Điện thoại: +84 819 367 571</li>
+              <li>Địa chỉ: 29 An Dương, quận Tây Hồ, thành phố Hà Nội</li>
             </ul>
 
             <p className="mt-8 text-sm text-gray-500">
