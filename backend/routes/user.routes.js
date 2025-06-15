@@ -13,6 +13,9 @@ router.put('/profile/change-password', verifyToken, userController.changePasswor
 router.delete('/profile', verifyToken, userController.deleteUser);
 router.get('/bookings', verifyToken, userController.getUserBookings);
 
+// Route để lấy thông tin admin cho chat
+router.get('/chat/admin', verifyToken, userController.getAdminForChat);
+
 // ===============================================
 // ADMIN ROUTES (Protected by verifyToken and isAdmin)
 // ===============================================

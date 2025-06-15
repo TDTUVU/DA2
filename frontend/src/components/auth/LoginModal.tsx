@@ -57,6 +57,8 @@ const LoginModal: React.FC = () => {
         const loggedInUser = await login(formData.email, formData.password)
         if (loggedInUser.role === 'admin') {
           navigate('/admin')
+        } else {
+          navigate('/')
         }
       } else {
         await register({
@@ -67,6 +69,7 @@ const LoginModal: React.FC = () => {
           phone_number: formData.phone_number,
           address: formData.address
         })
+        navigate('/')
       }
       setFormData({
         username: '',
@@ -210,7 +213,6 @@ const LoginModal: React.FC = () => {
             />
           </div>
 
-          {/* Nút Quên mật khẩu */}
           {isLoginMode && (
             <div className="text-right">
               <button

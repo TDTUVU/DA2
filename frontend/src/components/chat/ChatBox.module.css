@@ -1,0 +1,95 @@
+.container {
+  @apply flex flex-col h-full;
+}
+
+.header {
+  @apply flex justify-between items-center p-4 bg-blue-500 text-white;
+}
+
+.messages {
+  @apply flex-1 overflow-y-auto p-4 bg-gray-50;
+}
+
+.messageWrapper {
+  @apply flex mb-4;
+}
+
+.sent {
+  @apply justify-end;
+}
+
+.received {
+  @apply justify-start;
+}
+
+.messageContainer {
+  @apply max-w-[70%] flex flex-col;
+}
+
+.messageSender {
+  @apply text-xs mb-1 text-gray-600;
+}
+
+.sent .messageSender {
+  @apply text-right;
+}
+
+.received .messageSender {
+  @apply text-left;
+}
+
+.bubbleContainer {
+  @apply flex items-end gap-1;
+}
+
+.bubble {
+  @apply relative rounded-2xl px-3 py-2 text-sm;
+}
+
+.sent .bubble {
+  @apply bg-[#dcf8c6] text-gray-800;
+}
+
+.received .bubble {
+  @apply bg-gray-100 text-gray-800;
+}
+
+.arrow {
+  @apply w-2 h-2 transform rotate-45;
+}
+
+.sent .arrow {
+  @apply bg-[#dcf8c6] -ml-1;
+}
+
+.received .arrow {
+  @apply bg-gray-100 border-l border-t border-gray-200 -mr-1;
+}
+
+.timestamp {
+  @apply text-[11px] mt-1 text-gray-500;
+}
+
+.sent .timestamp {
+  @apply text-right;
+}
+
+.received .timestamp {
+  @apply text-left;
+}
+
+.typingIndicator {
+  @apply text-gray-500 text-sm mt-2;
+}
+
+.inputContainer {
+  @apply flex p-3 bg-white border-t;
+}
+
+.input {
+  @apply flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 text-sm;
+}
+
+.sendButton {
+  @apply bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium ml-2;
+} 

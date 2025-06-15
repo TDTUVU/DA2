@@ -339,3 +339,21 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server' });
   }
 };
+
+// Lấy thông tin admin cho chat
+exports.getAdminForChat = async (req, res) => {
+  try {
+    const admin = await User.findOne({ role: 'admin' })
+      .select('_id username full_name')
+      .lean();
+
+    if (!admin) {
+      return res.status(404).json({ message: 'Không tìm thấy admin' });
+    }
+
+    res.json({ admin });
+  } catch (error) {
+    console.error('Error in getAdminForChat:', error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};

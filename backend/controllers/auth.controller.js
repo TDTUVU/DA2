@@ -32,8 +32,25 @@ exports.register = async (req, res) => {
 
     await user.save();
 
+    // Tạo token sau khi đăng ký thành công
+    const token = jwt.sign(
+      { 
+        _id: user._id,
+        role: user.role 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     res.status(201).json({
-      message: 'Đăng ký thành công'
+      message: 'Đăng ký thành công',
+      token,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
     });
   } catch (error) {
     console.error('Register error:', error);
@@ -91,7 +108,7 @@ exports.login = async (req, res) => {
     res.json({
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         role: user.role,
@@ -165,7 +182,17 @@ exports.getCurrentUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
-    res.json({ user });
+    res.json({ 
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        full_name: user.full_name,
+        phone_number: user.phone_number,
+        address: user.address
+      } 
+    });
   } catch (error) {
     console.error('Error in getCurrentUser:', error);
     res.status(500).json({ message: 'Lỗi server', error: error.message });
@@ -192,7 +219,14 @@ exports.refreshToken = (req, res) => {
   }
   try {
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-    const accessToken = jwt.sign({ id: decoded.id, role: decoded.role }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const accessToken = jwt.sign(
+      { 
+        _id: decoded._id, 
+        role: decoded.role 
+      }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '24h' }
+    );
     res.json({ token: accessToken });
   } catch (error) {
     return res.status(401).json({ message: 'Refresh token không hợp lệ hoặc đã hết hạn' });

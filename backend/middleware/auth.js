@@ -30,7 +30,6 @@ const verifyToken = async (req, res, next) => {
 
       // Set user info vào req.user
       req.user = {
-        id: decoded._id,
         _id: decoded._id,
         role: decoded.role
       };

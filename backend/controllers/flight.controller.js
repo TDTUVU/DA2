@@ -101,11 +101,25 @@ exports.updateFlight = async (req, res) => {
     const updateData = { ...req.body };
     const files = req.files;
 
+    // Xử lý ảnh cũ nếu có
+    if (req.body.existingImages) {
+      try {
+        const existingImages = JSON.parse(req.body.existingImages);
+        updateData.images = existingImages;
+      } catch (error) {
+        console.error('Error parsing existingImages:', error);
+      }
+      delete updateData.existingImages;
+    }
+
+    // Upload và thêm ảnh mới nếu có
     if (files && files.length > 0) {
-        const uploadPromises = files.map(file => uploadToCloudinary(file));
-        const uploadResults = await Promise.all(uploadPromises);
-        const newImageUrls = uploadResults.map(result => result.secure_url);
-        updateData.images = newImageUrls;
+      const uploadPromises = files.map(file => uploadToCloudinary(file));
+      const uploadResults = await Promise.all(uploadPromises);
+      const newImageUrls = uploadResults.map(result => result.secure_url);
+      
+      // Kết hợp với ảnh cũ nếu có
+      updateData.images = updateData.images ? [...updateData.images, ...newImageUrls] : newImageUrls;
     }
 
     const updatedFlight = await Flight.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
@@ -224,19 +238,18 @@ exports.recreateFlights = async (req, res) => {
 // Bật/tắt trạng thái hiển thị của chuyến bay
 exports.toggleFlightVisibility = async (req, res) => {
   try {
-    const flight = await Flight.findById(req.params.id);
+    const { id } = req.params;
+    const flight = await Flight.findById(id);
+    
     if (!flight) {
-      return res.status(404).json({ message: 'Không tìm thấy chuyến bay.' });
+      return res.status(404).json({ message: 'Không tìm thấy chuyến bay' });
     }
 
     flight.isActive = !flight.isActive;
     await flight.save();
 
-    res.status(200).json({
-      message: `Chuyến bay đã được ${flight.isActive ? 'kích hoạt' : 'vô hiệu hóa'} thành công.`,
-      flight
-    });
+    res.json(flight);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server khi thay đổi trạng thái chuyến bay.', error: error.message });
+    res.status(500).json({ message: 'Lỗi server khi cập nhật trạng thái hiển thị.', error: error.message });
   }
 };

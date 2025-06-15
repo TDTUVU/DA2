@@ -3,54 +3,55 @@ import { toast } from 'react-toastify'
 import { authService } from '../services/auth.service'
 
 interface User {
-  id: string;
-  email: string;
+  _id: string;
+  id?: string;
   username: string;
+  email: string;
+  full_name: string;
+  phone_number?: string;
+  address?: string;
+  role: 'user' | 'admin';
+  images?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface RegisterData {
+  username: string;
+  email: string;
+  password: string;
   full_name: string;
   phone_number: string;
   address: string;
-  role: 'user' | 'admin';
 }
 
 interface AuthContextType {
-  isAuthenticated: boolean;
   user: User | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
   isLoginModalOpen: boolean;
   isLoginMode: boolean;
   isForgotPasswordOpen: boolean;
   isLogoutConfirmOpen: boolean;
+  login: (email: string, password: string) => Promise<User>;
+  register: (data: RegisterData) => Promise<void>;
+  logout: () => void;
+  logoutWithoutToast: () => void;
   openLoginModal: (isLogin: boolean) => void;
   closeLoginModal: () => void;
   openForgotPasswordModal: () => void;
   closeForgotPasswordModal: () => void;
   openLogoutConfirmModal: () => void;
   closeLogoutConfirmModal: () => void;
-  login: (email: string, password: string) => Promise<User>;
-  register: (data: {
-    username: string;
-    email: string;
-    password: string;
-    full_name: string;
-    phone_number: string;
-    address: string;
-  }) => Promise<void>;
-  logout: () => void;
-  logoutWithoutToast: () => void;
-  updateProfile: (data: {
-    full_name?: string;
-    phone_number?: string;
-    address?: string;
-  }) => Promise<void>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
+  getToken: () => string | null;
+  checkAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -58,23 +59,121 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      if (authService.isAuthenticated()) {
-        try {
-          const userData = await authService.getCurrentUser();
-          setUser(userData);
-          setIsAuthenticated(true);
-        } catch (error) {
-          console.error('Error checking auth:', error);
-          setIsAuthenticated(false);
-          setUser(null);
-        }
+  const checkAuth = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setUser(null)
+        setIsLoading(false)
+        return
       }
-      setIsLoading(false);
+
+      try {
+        const apiUser = await authService.getCurrentUser()
+        const userData: User = {
+          _id: apiUser.id,
+          id: apiUser.id,
+          username: apiUser.username,
+          email: apiUser.email,
+          full_name: apiUser.full_name,
+          phone_number: apiUser.phone_number,
+          address: apiUser.address,
+          role: apiUser.role,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+        setUser(userData)
+      } catch (error: any) {
+        if (error.message === 'No token found' || error.message === 'Token invalid' || error.message === 'Token expired') {
+          localStorage.removeItem('token')
+          setUser(null)
+        }
+        // Các lỗi khác sẽ giữ nguyên trạng thái user hiện tại
+      }
+    } catch (error) {
+      console.error('Error checking auth:', error)
+    } finally {
+      setIsLoading(false)
     }
-    checkAuth()
+  }
+
+  useEffect(() => {
+    const initAuth = async () => {
+      setIsLoading(true)
+      await checkAuth()
+    }
+
+    initAuth()
+
+    const interval = setInterval(() => {
+      checkAuth()
+    }, 5 * 60 * 1000)
+
+    return () => clearInterval(interval)
   }, [])
+
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await authService.login({ email, password })
+      localStorage.setItem('token', response.token)
+      const apiUser = response.user
+      const userData: User = {
+        _id: apiUser.id,
+        id: apiUser.id,
+        username: apiUser.username,
+        email: apiUser.email,
+        full_name: apiUser.full_name,
+        phone_number: apiUser.phone_number,
+        address: apiUser.address,
+        role: apiUser.role,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      setUser(userData)
+      closeLoginModal()
+      return userData
+    } catch (error: any) {
+      toast.error(error.message || 'Đăng nhập thất bại')
+      throw error
+    }
+  }
+
+  const register = async (data: RegisterData) => {
+    try {
+      const response = await authService.register(data)
+      localStorage.setItem('token', response.token)
+      const apiUser = response.user
+      const userData: User = {
+        _id: apiUser.id,
+        id: apiUser.id,
+        username: apiUser.username,
+        email: apiUser.email,
+        full_name: apiUser.full_name,
+        phone_number: apiUser.phone_number,
+        address: apiUser.address,
+        role: apiUser.role,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      setUser(userData)
+      closeLoginModal()
+      toast.success('Đăng ký thành công!')
+    } catch (error: any) {
+      toast.error(error.message || 'Đăng ký thất bại')
+      throw error
+    }
+  }
+
+  const logout = () => {
+    localStorage.removeItem('token')
+    setUser(null)
+    toast.success('Đăng xuất thành công!')
+  }
+
+  const logoutWithoutToast = () => {
+    localStorage.removeItem('token')
+    setUser(null)
+  }
 
   const openLoginModal = (isLogin: boolean) => {
     setIsLoginMode(isLogin)
@@ -83,10 +182,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const closeLoginModal = () => {
     setIsLoginModalOpen(false)
-    setIsLoginMode(true)
   }
 
   const openForgotPasswordModal = () => {
+    closeLoginModal()
     setIsForgotPasswordOpen(true)
   }
 
@@ -102,73 +201,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLogoutConfirmOpen(false)
   }
 
-  const login = async (email: string, password: string): Promise<User> => {
-    try {
-      const response = await authService.login({ email, password })
-      localStorage.setItem('token', response.token)
-      setUser(response.user)
-      setIsAuthenticated(true)
-      closeLoginModal()
-      toast.success('Đăng nhập thành công!')
-      return response.user;
-    } catch (error: any) {
-      toast.error(error.message || 'Đăng nhập thất bại')
-      throw error
-    }
-  }
-
-  const register = async (data: {
-    username: string;
-    email: string;
-    password: string;
-    full_name: string;
-    phone_number: string;
-    address: string;
-  }) => {
-    try {
-      const response = await authService.register(data)
-      localStorage.setItem('token', response.token)
-      setUser(response.user)
-      setIsAuthenticated(true)
-      closeLoginModal()
-      toast.success('Đăng ký thành công!')
-    } catch (error: any) {
-      toast.error(error.message || 'Đăng ký thất bại')
-      throw error
-    }
-  }
-
-  const updateProfile = async (data: {
-    full_name?: string;
-    phone_number?: string;
-    address?: string;
-  }) => {
-    try {
-      const updatedUser = await authService.updateProfile(data);
-      setUser(updatedUser);
-      toast.success('Cập nhật thông tin thành công!');
-    } catch (error: any) {
-      toast.error(error.message || 'Cập nhật thông tin thất bại');
-      throw error
-    }
-  }
-
-  const changePassword = async (currentPassword: string, newPassword: string) => {
-    try {
-      await authService.changePassword({ currentPassword, newPassword })
-      toast.success('Đổi mật khẩu thành công!')
-    } catch (error: any) {
-      toast.error(error.message || 'Đổi mật khẩu thất bại')
-      throw error
-    }
-  }
-
   const forgotPassword = async (email: string) => {
     try {
       await authService.forgotPassword(email)
-      toast.success('Vui lòng kiểm tra email để đặt lại mật khẩu!')
+      closeForgotPasswordModal()
+      toast.success('Vui lòng kiểm tra email của bạn để đặt lại mật khẩu!')
     } catch (error: any) {
-      toast.error(error.message || 'Gửi email đặt lại mật khẩu thất bại')
+      toast.error(error.message || 'Không thể gửi email đặt lại mật khẩu')
       throw error
     }
   }
@@ -178,50 +217,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await authService.resetPassword(token, newPassword)
       toast.success('Đặt lại mật khẩu thành công!')
     } catch (error: any) {
-      toast.error(error.message || 'Đặt lại mật khẩu thất bại')
+      toast.error(error.message || 'Không thể đặt lại mật khẩu')
       throw error
     }
   }
 
-  const logout = () => {
-    authService.logout()
-    setIsAuthenticated(false)
-    setUser(null)
-    toast.success('Đăng xuất thành công!')
+  const getToken = () => {
+    return localStorage.getItem('token')
   }
 
-  const logoutWithoutToast = () => {
-    authService.logout()
-    setIsAuthenticated(false)
-    setUser(null)
+  const value = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    isLoginModalOpen,
+    isLoginMode,
+    isForgotPasswordOpen,
+    isLogoutConfirmOpen,
+    login,
+    register,
+    logout,
+    logoutWithoutToast,
+    openLoginModal,
+    closeLoginModal,
+    openForgotPasswordModal,
+    closeForgotPasswordModal,
+    openLogoutConfirmModal,
+    closeLogoutConfirmModal,
+    forgotPassword,
+    resetPassword,
+    getToken,
+    checkAuth
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated,
-        user,
-        isLoading,
-        isLoginModalOpen,
-        isLoginMode,
-        isForgotPasswordOpen,
-        isLogoutConfirmOpen,
-        openLoginModal,
-        closeLoginModal,
-        openForgotPasswordModal,
-        closeForgotPasswordModal,
-        openLogoutConfirmModal,
-        closeLogoutConfirmModal,
-        login,
-        register,
-        logout,
-        logoutWithoutToast,
-        updateProfile,
-        changePassword,
-        forgotPassword,
-        resetPassword,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

@@ -36,8 +36,9 @@ interface ChangePasswordData {
   newPassword: string;
 }
 
-// const API_URL = 'http://localhost:5000/api';
-const API_URL = '/api';
+// Kiểm tra xem có đang ở port 3000 không
+const isPort3000 = window.location.port === '3000';
+const API_URL = isPort3000 ? 'http://localhost:5000/api' : '/api';
 
 export const authService = {
   async login(data: LoginData): Promise<AuthResponse> {
@@ -54,6 +55,11 @@ export const authService = {
 
       if (!response.ok) {
         throw new Error(result.message || 'Đăng nhập thất bại');
+      }
+
+      // Lưu token vào localStorage
+      if (result.token) {
+        localStorage.setItem('token', result.token);
       }
 
       return result;
@@ -89,13 +95,21 @@ export const authService = {
   async getCurrentUser(): Promise<AuthResponse['user']> {
     try {
       const token = this.getToken();
-      if (!token) throw new Error('No token found');
+      if (!token) {
+        this.logout(); // Xóa token nếu không tồn tại
+        throw new Error('No token found');
+      }
 
       const response = await fetch(`${API_URL}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
+
+      if (response.status === 401) {
+        this.logout(); // Xóa token nếu không hợp lệ
+        throw new Error('Token không hợp lệ hoặc đã hết hạn');
+      }
 
       const result = await response.json();
 
@@ -113,7 +127,10 @@ export const authService = {
   async updateProfile(data: UpdateProfileData): Promise<AuthResponse['user']> {
     try {
       const token = this.getToken();
-      if (!token) throw new Error('No token found');
+      if (!token) {
+        this.logout();
+        throw new Error('No token found');
+      }
 
       const response = await fetch(`${API_URL}/auth/profile`, {
         method: 'PUT',
@@ -123,6 +140,11 @@ export const authService = {
         },
         body: JSON.stringify(data),
       });
+
+      if (response.status === 401) {
+        this.logout();
+        throw new Error('Token không hợp lệ hoặc đã hết hạn');
+      }
 
       const result = await response.json();
 
@@ -140,7 +162,10 @@ export const authService = {
   async changePassword(data: ChangePasswordData): Promise<void> {
     try {
       const token = this.getToken();
-      if (!token) throw new Error('No token found');
+      if (!token) {
+        this.logout();
+        throw new Error('No token found');
+      }
 
       const response = await fetch(`${API_URL}/auth/change-password`, {
         method: 'POST',
@@ -150,6 +175,11 @@ export const authService = {
         },
         body: JSON.stringify(data),
       });
+
+      if (response.status === 401) {
+        this.logout();
+        throw new Error('Token không hợp lệ hoặc đã hết hạn');
+      }
 
       const result = await response.json();
 
@@ -207,6 +237,8 @@ export const authService = {
   logout() {
     console.log('Logging out, removing token');
     localStorage.removeItem('token');
+    // Reload trang để reset state
+    window.location.reload();
   },
 
   getToken() {

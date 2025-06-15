@@ -51,10 +51,9 @@ router.get('/', softVerifyToken, flightController.getAllFlights);
  *         name: id
  *         required: true
  *         schema: { type: string }
- *         description: ID của chuyến bay
  *     responses:
  *       200:
- *         description: Thông tin chi tiết chuyến bay
+ *         description: Chi tiết chuyến bay
  *       404:
  *         description: Không tìm thấy chuyến bay
  */
@@ -127,7 +126,23 @@ router.post(
  *           schema:
  *             type: object
  *             properties:
- *               // ... (các trường tương tự như POST)
+ *               flight_name: { type: string }
+ *               departure: { type: string }
+ *               arrival: { type: string }
+ *               departure_time: { type: string, format: date-time }
+ *               arrival_time: { type: string, format: date-time }
+ *               price: { type: number }
+ *               available_seats: { type: number }
+ *               airline: { type: string }
+ *               rating: { type: number }
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *               existingImages:
+ *                 type: string
+ *                 description: JSON string of existing image URLs
  *     responses:
  *       200:
  *         description: Cập nhật thành công
@@ -158,13 +173,10 @@ router.patch(
  *     responses:
  *       200:
  *         description: Xóa thành công
+ *       404:
+ *         description: Không tìm thấy chuyến bay
  */
-router.delete(
-    '/:id', 
-    verifyToken, 
-    isAdmin, 
-    flightController.deleteFlight
-);
+router.delete('/:id', verifyToken, isAdmin, flightController.deleteFlight);
 
 /**
  * @swagger
@@ -182,12 +194,9 @@ router.delete(
  *     responses:
  *       200:
  *         description: Cập nhật trạng thái thành công
+ *       404:
+ *         description: Không tìm thấy chuyến bay
  */
-router.patch(
-    '/:id/toggle-visibility', 
-    verifyToken, 
-    isAdmin, 
-    flightController.toggleFlightVisibility
-);
+router.patch('/:id/toggle-visibility', verifyToken, isAdmin, flightController.toggleFlightVisibility);
 
 module.exports = router;

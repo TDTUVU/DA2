@@ -1,13 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { FiGrid, FiBox, FiUsers, FiDollarSign } from 'react-icons/fi';
+import { FiGrid, FiBox, FiUsers, FiDollarSign, FiLogOut } from 'react-icons/fi';
+import AdminSupportButton from '../../components/chat/AdminSupportButton';
+import { useAuth } from '../../hooks/useAuth';
 
 const AdminLayout: React.FC = () => {
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const { openLogoutConfirmModal } = useAuth();
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Top Navigation for Mobile */}
       <div className="lg:hidden bg-gray-800 text-white fixed top-0 left-0 right-0 z-20 h-14 flex items-center justify-between px-4">
         <span className="font-bold">Admin</span>
+        <button
+          onClick={openLogoutConfirmModal}
+          className="text-white hover:text-gray-300"
+          aria-label="Đăng xuất"
+        >
+          <FiLogOut size={20} />
+        </button>
       </div>
 
       {/* Bottom Navigation for Mobile */}
@@ -46,9 +58,9 @@ const AdminLayout: React.FC = () => {
       </div>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block fixed left-0 top-0 w-64 h-screen bg-gray-800 text-white">
+      <aside className="hidden lg:flex flex-col fixed left-0 top-0 w-64 h-screen bg-gray-800 text-white">
         <div className="p-4 text-xl font-bold">Admin</div>
-        <nav>
+        <nav className="flex-1">
           <ul>
             <li>
               <NavLink 
@@ -93,6 +105,14 @@ const AdminLayout: React.FC = () => {
             </li>
           </ul>
         </nav>
+
+        {/* Logout Button */}
+        <button
+          onClick={openLogoutConfirmModal}
+          className="flex items-center p-4 text-white hover:bg-gray-700 w-full"
+        >
+          <FiLogOut className="mr-3" /> Đăng xuất
+        </button>
       </aside>
 
       {/* Main Content */}
@@ -101,6 +121,9 @@ const AdminLayout: React.FC = () => {
           <Outlet />
         </div>
       </main>
+
+      {/* Chat Support Button */}
+      <AdminSupportButton />
     </div>
   );
 };

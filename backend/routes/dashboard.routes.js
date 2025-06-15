@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const dashboardController = require('../controllers/dashboard.controller');
-const { verifyToken } = require('../middleware/auth');
-const admin = require('../middleware/admin');
+const { verifyToken, isAdmin } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -25,6 +24,9 @@ const admin = require('../middleware/admin');
  *       401:
  *         description: Không có quyền admin
  */
-router.get('/stats', verifyToken, admin, dashboardController.getRevenueStats);
+router.get('/stats', verifyToken, isAdmin, dashboardController.getRevenueStats);
+
+// Route lấy metrics cho dashboard
+router.get('/metrics', verifyToken, isAdmin, dashboardController.getDashboardMetrics);
 
 module.exports = router; 

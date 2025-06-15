@@ -13,6 +13,11 @@ const bookingRoutes = require('./routes/booking.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const helmet = require('helmet');
 const revenueRoutes = require('./routes/revenue.routes');
+const chatRoutes = require('./routes/chat.routes');
+const swaggerUi = require('swagger-ui-express');
+const specs = require('./config/swagger');
+const orderRoutes = require('./routes/order.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
 
 const app = express();
 app.set('trust proxy', 1); // Tin tưởng proxy để lấy IP thật
@@ -37,6 +42,9 @@ app.use(cookieParser());
 // Serve static files from public folder
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
+// API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -46,6 +54,9 @@ app.use('/api/tours', tourRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin/revenue', revenueRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/admin/dashboard', dashboardRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

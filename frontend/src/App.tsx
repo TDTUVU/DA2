@@ -41,6 +41,16 @@ const App: React.FC = () => {
     <Router>
       <AuthProvider>
         <Routes>
+          {/* Admin Routes */}
+          <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="services" element={<AdminServicesPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="bookings" element={<AdminBookingsPage />} />
+            <Route path="revenue" element={<AdminRevenuePage />} />
+          </Route>
+
+          {/* User Routes */}
           <Route path="/*" element={
             <Layout>
               <Routes>
@@ -69,24 +79,11 @@ const App: React.FC = () => {
               </Routes>
             </Layout>
           } />
-          
-          <Route path="/admin" element={
-            <ProtectedRoute adminOnly={true}>
-              <AdminLayout />
-            </ProtectedRoute>
-          }>
-            <Route index element={<AdminDashboardPage />} />
-            <Route path="services" element={<AdminServicesPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
-            <Route path="bookings" element={<AdminBookingsPage />} />
-            <Route path="revenue" element={<AdminRevenuePage />} />
-          </Route>
         </Routes>
-        
         <LoginModal />
         <ForgotPasswordModal />
         <ConfirmLogoutModal />
-        <ToastContainer position="top-right" autoClose={3000} />
+        <ToastContainer />
       </AuthProvider>
     </Router>
   );

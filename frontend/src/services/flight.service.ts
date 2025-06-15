@@ -16,11 +16,11 @@ const getAuthHeaders = (isFormData: boolean = false) => {
 };
 
 const handleResponse = async (response: Response) => {
+    const data = await response.json();
     if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || err.message || 'Đã có lỗi xảy ra');
+        throw new Error(data.message || 'Đã xảy ra lỗi');
     }
-    return response.json();
+    return data;
 };
 
 export const flightService = {

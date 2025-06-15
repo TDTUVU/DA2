@@ -9,7 +9,7 @@ export interface Flight {
   available_seats: number;
   airline: string;
   rating: number;
-  images: string[] | FileList;
+  images: string[];
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;

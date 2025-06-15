@@ -26,7 +26,7 @@ const TourForm: React.FC<TourFormProps> = ({ onSubmit, onCancel, tour, isSubmitt
     if (imageFiles && imageFiles.length > 0 && imageFiles[0] instanceof File) {
       const newPreviews: string[] = [];
       Array.from(imageFiles).forEach(file => {
-        const reader = new FileReader();
+      const reader = new FileReader();
         reader.onloadend = () => {
           newPreviews.push(reader.result as string);
           setImagePreviews([...newPreviews]);

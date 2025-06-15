@@ -24,10 +24,11 @@ const GlobalFilter: React.FC<GlobalFilterProps> = ({ globalFilter, setGlobalFilt
 
   return (
     <input
-      value={value || ""}
+      type="text"
+      value={value || ''}
       onChange={e => setValue(e.target.value)}
-      placeholder="Tìm kiếm sản phẩm..."
-      className="p-2 border border-gray-300 rounded-md text-sm w-full focus:ring-blue-500 focus:border-blue-500"
+      placeholder="Tìm kiếm..."
+      className="p-2 border rounded w-full sm:w-64 text-sm"
     />
   );
 };
@@ -99,13 +100,13 @@ const ToursTable: React.FC = () => {
   const columns = useMemo<Column<Tour>[]>(
     () => [
       {
-        Header: 'Ảnh',
+        Header: 'ẢNH',
         accessor: 'images',
         Cell: ({ value }: CellProps<Tour, string[]>) => <img src={value?.[0] || 'https://placehold.co/100x80'} alt="Tour" className="w-24 h-20 object-cover rounded" />,
         disableSortBy: true,
       },
       {
-        Header: 'Tên Sản phẩm',
+        Header: 'THÔNG TIN TOUR',
         accessor: 'tour_name',
         Cell: ({row}: { row: Row<Tour> }) => (
           <div>
@@ -115,43 +116,61 @@ const ToursTable: React.FC = () => {
         )
       },
       {
-        Header: 'Giá',
-        accessor: 'price_per_person',
-        Cell: ({ value }: CellProps<Tour, number>) => `${value.toLocaleString()} ₫`,
-      },
-      {
-        Header: 'Thời gian',
+        Header: 'THỜI GIAN',
         accessor: 'duration',
-        Cell: ({ value }: CellProps<Tour, string>) => `${value}`,
+        Cell: ({ value }: CellProps<Tour, string>) => (
+          <div className="text-sm text-gray-600">{value} ngày</div>
+        ),
       },
       {
-        Header: 'Hiển thị',
+        Header: 'GIÁ/NGƯỜI',
+        accessor: 'price_per_person',
+        Cell: ({ value }: CellProps<Tour, number>) => (
+          <div className="text-sm text-gray-600">{value.toLocaleString()} ₫</div>
+        ),
+      },
+      {
+        Header: 'SỐ CHỖ',
+        accessor: 'available_seats',
+        Cell: ({ value }: CellProps<Tour, number>) => (
+          <div className="text-sm text-gray-600">{value}</div>
+        ),
+      },
+      {
+        Header: 'ĐÁNH GIÁ',
+        accessor: 'rating',
+        Cell: ({ value }: CellProps<Tour, number>) => (
+          <div className="text-sm text-gray-600">{value ? value.toFixed(1) : 'N/A'}</div>
+        ),
+      },
+      {
+        Header: 'HIỂN THỊ',
         accessor: 'isActive',
         Cell: ({ row }: { row: Row<Tour> }) => (
           <button 
             onClick={() => handleToggleVisibility(row.original._id)} 
             className={`p-2 rounded-full transition-colors duration-200 ${row.original.isActive ? 'bg-green-100 hover:bg-green-200' : 'bg-red-100 hover:bg-red-200'}`}
-            title={row.original.isActive ? 'Ẩn dịch vụ' : 'Hiện dịch vụ'}
+            title={row.original.isActive ? 'Ẩn tour' : 'Hiện tour'}
           >
             {row.original.isActive ? <FiEye className="text-green-600" /> : <FiEyeOff className="text-red-600" />}
           </button>
         ),
       },
       {
-        Header: 'Thao tác',
+        Header: 'THAO TÁC',
         accessor: '_id',
         Cell: ({ row }: { row: Row<Tour> }) => (
           <div className="flex space-x-2">
             <button 
               onClick={() => handleOpenModal(row.original)}
               className="p-2 text-gray-500 hover:text-blue-600 transition-colors"
-              title="Sửa dịch vụ"
+              title="Sửa tour"
             >
               <FiEdit />
             </button>
             <button 
               className="p-2 text-gray-500 hover:text-red-600 transition-colors"
-              title="Xóa dịch vụ"
+              title="Xóa tour"
             >
               <FiTrash2 />
             </button>
@@ -202,7 +221,7 @@ const ToursTable: React.FC = () => {
             className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold text-sm transition-all flex items-center justify-center gap-2"
           >
             <FiPlus />
-            Thêm dịch vụ
+            Thêm tour mới
           </button>
         </div>
 
@@ -242,7 +261,7 @@ const ToursTable: React.FC = () => {
                       <button 
                         onClick={() => handleToggleVisibility(tour._id)}
                         className={`p-2 rounded-full transition-colors duration-200 ${tour.isActive ? 'bg-green-100 hover:bg-green-200' : 'bg-red-100 hover:bg-red-200'}`}
-                        title={tour.isActive ? 'Ẩn dịch vụ' : 'Hiện dịch vụ'}
+                        title={tour.isActive ? 'Ẩn tour' : 'Hiện tour'}
                       >
                         {tour.isActive ? <FiEye className="text-green-600" /> : <FiEyeOff className="text-red-600" />}
                       </button>
@@ -250,13 +269,13 @@ const ToursTable: React.FC = () => {
                         <button 
                           onClick={() => handleOpenModal(tour)}
                           className="p-2 text-gray-500 hover:text-blue-600 transition-colors"
-                          title="Sửa dịch vụ"
+                          title="Sửa tour"
                         >
                           <FiEdit />
                         </button>
                         <button 
                           className="p-2 text-gray-500 hover:text-red-600 transition-colors"
-                          title="Xóa dịch vụ"
+                          title="Xóa tour"
                         >
                           <FiTrash2 />
                         </button>
@@ -271,54 +290,55 @@ const ToursTable: React.FC = () => {
 
         {/* Desktop View */}
         <div className="hidden lg:block overflow-x-auto">
-          <table {...getTableProps()} className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              {headerGroups.map(headerGroup => {
-                const { key, ...restHeaderGroupProps } = headerGroup.getHeaderGroupProps();
-                return (
-                  <tr key={key} {...restHeaderGroupProps}>
-                    {headerGroup.headers.map(column => {
+        <table {...getTableProps()} className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            {headerGroups.map(headerGroup => {
+              const { key, ...restHeaderGroupProps } = headerGroup.getHeaderGroupProps();
+              return (
+                <tr key={key} {...restHeaderGroupProps}>
+                  {headerGroup.headers.map(column => {
                       const { key, ...restColumn } = column.getHeaderProps(column.getSortByToggleProps());
-                      return (
+                    return (
                         <th
                           key={key}
                           {...restColumn}
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
-                          {column.render('Header')}
+                        {column.render('Header')}
                           <span>
                             {column.isSorted ? (column.isSortedDesc ? ' 🔽' : ' 🔼') : ''}
-                          </span>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </thead>
-            <tbody {...getTableBodyProps()} className="bg-white divide-y divide-gray-200">
-              {page.map(row => {
-                prepareRow(row);
-                return (
-                  <tr {...row.getRowProps()}>
-                    {row.cells.map(cell => {
-                      const { key, ...restCell } = cell.getCellProps();
-                      return (
-                        <td
-                          key={key}
-                          {...restCell}
-                          className="px-6 py-4 whitespace-nowrap"
-                        >
-                          {cell.render('Cell')}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                        </span>
+                      </th>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </thead>
+          <tbody {...getTableBodyProps()} className="bg-white divide-y divide-gray-200">
+            {page.map(row => {
+              prepareRow(row);
+              const { key, ...rowProps } = row.getRowProps();
+              return (
+                <tr key={key} {...rowProps}>
+                  {row.cells.map(cell => {
+                    const { key, ...cellProps } = cell.getCellProps();
+                    return (
+                      <td
+                        key={key}
+                        {...cellProps}
+                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-600"
+                      >
+                        {cell.render('Cell')}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
         {/* Pagination */}
         <div className="py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -348,7 +368,7 @@ const ToursTable: React.FC = () => {
               title="Trang đầu tiên"
             >
               <FiChevronsLeft />
-            </button>
+              </button>
             <button
               onClick={() => previousPage()}
               disabled={!canPreviousPage}
@@ -356,7 +376,7 @@ const ToursTable: React.FC = () => {
               title="Trang trước"
             >
               <FiChevronLeft />
-            </button>
+              </button>
             <button
               onClick={() => nextPage()}
               disabled={!canNextPage}
@@ -364,7 +384,7 @@ const ToursTable: React.FC = () => {
               title="Trang sau"
             >
               <FiChevronRight />
-            </button>
+              </button>
             <button
               onClick={() => gotoPage(pageCount - 1)}
               disabled={!canNextPage}
@@ -372,17 +392,17 @@ const ToursTable: React.FC = () => {
               title="Trang cuối"
             >
               <FiChevronsRight />
-            </button>
+              </button>
           </div>
         </div>
       </div>
-
+      
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title={selectedTour ? 'Chỉnh sửa Tour' : 'Thêm Tour mới'}
+        title={selectedTour ? 'Chỉnh sửa tour' : 'Thêm tour mới'}
       >
-        <TourForm
+        <TourForm 
           tour={selectedTour}
           onSubmit={handleFormSubmit}
           isSubmitting={isSubmitting}
